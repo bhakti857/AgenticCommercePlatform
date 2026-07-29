@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AI-Ecommerce.Agent/AI-Ecommerce.Agent.csproj" />
+    <Project Path="src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj" />
+    <Project Path="src/AI-Ecommerce.Data/AI-Ecommerce.Data.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AI-Ecommerce.Tests/AI-Ecommerce.Tests.csproj" />
+  </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+</Solution>

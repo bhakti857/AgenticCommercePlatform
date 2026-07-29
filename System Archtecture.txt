@@ -1,0 +1,120 @@
+🏗️ System Architecture
+High-Level Architecture
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           React Frontend (TypeScript)                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ MasterAdmin  │  │    Admin     │  │  Employees   │  │  Customers   │  │
+│  │   Dashboard  │  │  Dashboard   │  │  Dashboard   │  │   Shopping   │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘  │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │ HTTPS / WebSocket
+┌─────────────────────────────────────▼───────────────────────────────────────┐
+│                     ASP.NET Core Web API (.NET 9)                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                        Controllers Layer                            │  │
+│  │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐      │  │
+│  │  │   Auth    │  │ Products  │  │  Orders   │  │   Users   │      │  │
+│  │  └───────────┘  └───────────┘  └───────────┘  └───────────┘      │  │
+│  └─────────────────────────────┬───────────────────────────────────────┘  │
+│                                │                                          │
+│  ┌─────────────────────────────▼───────────────────────────────────────┐  │
+│  │                       Service Layer                                 │  │
+│  │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐      │  │
+│  │  │   Auth    │  │ Product   │  │   Order   │  │ Payment   │      │  │
+│  │  │  Service  │  │  Service  │  │  Service  │  │  Service  │      │  │
+│  │  └───────────┘  └───────────┘  └───────────┘  └───────────┘      │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                │                                          │
+│  ┌─────────────────────────────▼───────────────────────────────────────┐  │
+│  │                  Agent Harness (Microsoft Agent Framework)          │  │
+│  │  ┌────────────────────────────────────────────────────────────┐   │  │
+│  │  │                    Orchestrator Agent                     │   │  │
+│  │  │  - Intent Recognition  - Context Management              │   │  │
+│  │  │  - Tool Selection      - Conversation Flow               │   │  │
+│  │  └────────────────────┬──────────────────────────────────────┘   │  │
+│  │                       │                                           │  │
+│  │  ┌────────────────────▼──────────────────────────────────────┐   │  │
+│  │  │                     Harness Layer                         │   │  │
+│  │  │  - Input Validation  - Permission Control                │   │  │
+│  │  │  - Output Validation - Cost Control                      │   │  │
+│  │  │  - Error Handling    - Context Compaction                │   │  │
+│  │  └────────────────────┬──────────────────────────────────────┘   │  │
+│  │                       │                                           │  │
+│  │  ┌────────────────────▼──────────────────────────────────────┐   │  │
+│  │  │                  Specialized Agents                      │   │  │
+│  │  │  - Order Processing Agent  - Product Search Agent       │   │  │
+│  │  │  - Customer Support Agent  - Recommendation Agent       │   │  │
+│  │  └──────────────────────────────────────────────────────────┘   │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+┌─────────────────────────────────────▼───────────────────────────────────────┐
+│                    Microsoft SQL Server (2022)                              │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌───────────┐│
+│  │   Users    │ │  Products  │ │   Orders   │ │  Payments  │ │   Audit   ││
+│  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └───────────┘│
+└─────────────────────────────────────────────────────────────────────────────┘
+
+🏗️ Architecture & Modules
+text
+src/
+├── AI-Ecommerce.Api                # Web API project (controllers, services, DTOs)
+│   ├── Controllers/
+│   │   ├── AuthController.cs       # Register, login, token issuance
+│   │   ├── ProductsController.cs   # Product CRUD
+│   │   ├── OrdersController.cs     # Order creation & retrieval (with DTOs)
+│   │   └── AgentController.cs      # Chat with the AI harness
+│   ├── Services/
+│   │   └── JwtService.cs           # JWT generation
+│   ├── DTOs/
+│   │   └── OrderDtos.cs            # Data transfer objects (prevents cycles)
+│   └── Program.cs                  # Startup, DI, middleware
+├── AI-Ecommerce.Data               # Data access layer
+│   ├── Models/                     # Entity models (User, Product, Order, OrderItem)
+│   ├── ApplicationDbContext.cs     # DbContext and model configuration
+│   └── DataSeeder.cs               # Seeds MasterAdmin and sample products
+├── AI-Ecommerce.Agent              # AI harness (mock implementation)
+│   └── Harness/
+│       ├── AgentHarness.cs         # Orchestrates chat sessions
+│       └── MockChatClient.cs       # Simulates LLM responses (IChatClient)
+└── tests/                          # Unit tests (optional)
+
+
+🗄️ Database Schema
+Core tables:
+
+Users – stores all users (discriminated by UserType: 1=MasterAdmin, 2=Admin, 3=Employee, 4=Customer)
+
+Products – product catalog (SKU, name, price, stock, etc.)
+
+Orders – order header (customer, totals, status)
+
+OrderItems – line items (product, quantity, price snapshot)
+
+Relationships:
+
+Orders.CustomerId → Users.Id
+
+OrderItems.OrderId → Orders.Id (cascade delete)
+
+OrderItems.ProductId → Products.Id (restrict delete)
+
+🔐 Authentication & Authorization
+JWT tokens issued on login/register.
+
+Claims: sub (UserId), email, UserType.
+
+Custom policy for role‑based access (you can extend with permission claims).
+
+All endpoints except /auth/register and /auth/login are protected with [Authorize].
+
+🤖 AI Agent Harness (Mock)
+The agent is built with Microsoft.Extensions.AI (preview).
+
+MockChatClient implements IChatClient and returns simple keyword‑based responses.
+
+AgentHarness manages session histories (in‑memory) and can be extended to call real LLMs (e.g., Azure OpenAI, Ollama).
+
+The endpoint POST /api/agent/chat accepts a { "message": "..." } and returns a response

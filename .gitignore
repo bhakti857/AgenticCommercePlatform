@@ -1,0 +1,42 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+*.cache
+*.log
+*.tmp
+*.pid
+*.seed
+*.pid.lock
+*.sqlite
+*.sqlite-journal
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+[Ll]ogs/
+
+# Environment files
+.env
+.env.local
+appsettings.Development.json
+appsettings.Production.json
+secrets.json
+
+# Docker
+*.dockerignore
+
+# User secrets
+secrets.json
+*.secrets
+*.user
+
+# Misc
+*.DS_Store
+Thumbs.db

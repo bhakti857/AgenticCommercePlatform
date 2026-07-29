@@ -1,0 +1,51 @@
+services:
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ecommerce-sql
+    environment:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: 'YourStrong!Passw0rd'
+      MSSQL_PID: 'Express'
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - ecommerce-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-api
+    depends_on:
+      - sql-server
+    ports:
+      - "5000:80"
+      - "5001:443"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=sql-server;Database=AgenticCommerceDB;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:80"
+    volumes:
+      - ./src:/app/src
+      - ./working:/app/working
+    networks:
+      - ecommerce-network
+
+  adminer:
+    image: adminer:latest
+    container_name: ecommerce-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - sql-server
+    networks:
+      - ecommerce-network
+
+volumes:
+  sqlserver_data:
+
+networks:
+  ecommerce-network:
+    driver: bridge

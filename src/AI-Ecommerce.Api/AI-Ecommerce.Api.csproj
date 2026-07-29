@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>6fb644e6-7caf-4ef4-b739-b82321e16a01</UserSecretsId>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<DockerfileContext>..\..</DockerfileContext>
+		<DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.0.3" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="9.0.0-preview.9.24507.7" />
+		<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="9.0.0-preview.9.24507.7" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\AI-Ecommerce.Agent\AI-Ecommerce.Agent.csproj" />
+		<ProjectReference Include="..\AI-Ecommerce.Data\AI-Ecommerce.Data.csproj" />
+	</ItemGroup>
+
+</Project>
