@@ -46,9 +46,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // 5. Add Authorization
 builder.Services.AddAuthorization();
 
-// 6. ✅ Register Agent Services (HERE - Correct)
+// ✅ 5b. Add CORS (new)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+});
+
+// 6. Register Agent Services
 builder.Services.AddScoped<AgentHarness>();
-builder.Services.AddScoped<IChatClient, MockChatClient>();
+
+// Use the mock client for now – no external dependencies
+builder.Services.AddScoped<IChatClient>(_ => new MockChatClient());
 
 var app = builder.Build();
 
@@ -60,6 +75,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// ✅ 7b. Use CORS (new – must be placed before UseAuthentication and UseAuthorization)
+app.UseCors("AllowReactApp");
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

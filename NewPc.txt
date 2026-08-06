@@ -1,0 +1,290 @@
+✅ Step 1 – Import Postman Collection
+Save this as AgenticCommerce.postman_collection.json and import it into Postman.
+
+<details> <summary><b>Click to expand – Full Postman Collection JSON</b></summary>
+json
+{
+  "info": {
+    "name": "Agentic Commerce Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\",\n  \"password\": \"Customer@123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"userType\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\",\n  \"password\": \"Customer@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"P004\",\n  \"name\": \"Wireless Mouse\",\n  \"description\": \"Ergonomic wireless mouse\",\n  \"price\": 29.99,\n  \"cost\": 15.00,\n  \"category\": \"Electronics\",\n  \"stockQuantity\": 50,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Get My Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"productId\": 1, \"quantity\": 2 },\n    { \"productId\": 2, \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Agent Chat",
+      "item": [
+        {
+          "name": "Chat with Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Show me running shoes\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/agent/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agent", "chat"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
+</details>
+⚙️ Step 2 – Set Up Environment Variables in Postman
+Click the Environment dropdown (top right) → Manage Environments.
+
+Click Add.
+
+Name: AgenticCommerce Dev
+
+Add these variables:
+
+Variable	Initial Value	Current Value
+baseUrl	http://localhost:5000	http://localhost:5000
+token	(empty)	(will be filled after login)
+Click Save and select this environment.
+
+🔑 Step 3 – Test the Flow
+1. Register a User
+POST {{baseUrl}}/api/auth/register
+
+json
+{
+  "email": "customer@example.com",
+  "password": "Customer@123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "userType": 4
+}
+✅ Expected: 201 Created with a token.
+
+2. Login
+POST {{baseUrl}}/api/auth/login
+
+json
+{
+  "email": "customer@example.com",
+  "password": "Customer@123"
+}
+✅ Expected: 200 OK with a token.
+
+3. Set the Token in Postman
+After login, copy the token from the response:
+
+Go to Environment Variables.
+
+Paste the token into the token field.
+
+Click Save.
+
+Now all protected endpoints will automatically use this token (via Bearer {{token}}).
+
+4. Get All Products (Protected)
+GET {{baseUrl}}/api/products
+
+✅ Expected: List of products.
+
+5. Create an Order (Protected)
+POST {{baseUrl}}/api/orders
+
+json
+{
+  "items": [
+    { "productId": 1, "quantity": 2 },
+    { "productId": 2, "quantity": 1 }
+  ]
+}
+✅ Expected: Order details with orderNumber.
+
+6. Chat with AI Agent (Protected)
+POST {{baseUrl}}/api/agent/chat
+
+json
+{
+  "message": "Show me running shoes"
+}
+✅ Expected: A response from the mock agent.
+
+📋 Quick Reference – Postman Endpoints
+Method	Endpoint	Auth Required
+POST	/api/auth/register	❌ No
+POST	/api/auth/login	❌ No
+GET	/api/products	✅ Yes
+GET	/api/products/{id}	✅ Yes
+POST	/api/products	✅ Yes (Admin)
+GET	/api/orders	✅ Yes
+POST	/api/orders	✅ Yes
+POST	/api/agent/chat	✅ Yes
+🔄 On New PC – Summary
+bash
+# 1. Clone
+git clone https://github.com/bhakti857/AgenticCommercePlatform.git
+cd AgenticCommercePlatform
+
+# 2. Start Docker
+docker-compose up -d --build
+
+# 3. Apply migrations
+docker exec -it ecommerce-api dotnet ef database update --project src/AI-Ecommerce.Data --startup-project src/AI-Ecommerce.Api
+
+# 4. Import Postman collection (above)
+
+# 5. Test Register → Login → Get Products → Create Order → Chat

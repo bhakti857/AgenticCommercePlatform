@@ -1,0 +1,77 @@
+# 1. Create solution
+dotnet new sln -n AI-Ecommerce-Platform
+
+# 2. Create projects
+dotnet new webapi -n AI-Ecommerce.Api -o src/AI-Ecommerce.Api --framework net8.0
+dotnet new classlib -n AI-Ecommerce.Data -o src/AI-Ecommerce.Data --framework net8.0
+dotnet new classlib -n AI-Ecommerce.Agent -o src/AI-Ecommerce.Agent --framework net8.0
+dotnet new xunit -n AI-Ecommerce.Tests -o tests/AI-Ecommerce.Tests --framework net8.0
+
+# 3. Add projects to solution (individual files)
+dotnet sln add src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj
+dotnet sln add src/AI-Ecommerce.Data/AI-Ecommerce.Data.csproj
+dotnet sln add src/AI-Ecommerce.Agent/AI-Ecommerce.Agent.csproj
+dotnet sln add tests/AI-Ecommerce.Tests/AI-Ecommerce.Tests.csproj
+
+# 4. Add project references
+dotnet add src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj reference src/AI-Ecommerce.Data/AI-Ecommerce.Data.csproj
+dotnet add src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj reference src/AI-Ecommerce.Agent/AI-Ecommerce.Agent.csproj
+dotnet add src/AI-Ecommerce.Agent/AI-Ecommerce.Agent.csproj reference src/AI-Ecommerce.Data/AI-Ecommerce.Data.csproj
+dotnet add tests/AI-Ecommerce.Tests/AI-Ecommerce.Tests.csproj reference src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj
+dotnet add tests/AI-Ecommerce.Tests/AI-Ecommerce.Tests.csproj reference src/AI-Ecommerce.Data/AI-Ecommerce.Data.csproj
+
+# 5. Restore and build
+dotnet restore
+dotnet build
+
+# 1. Add Design package to API project
+dotnet add src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj package Microsoft.EntityFrameworkCore.Design --version 8.0.0
+
+# 2. Restore packages
+dotnet restore
+
+# 3. Create initial migration
+dotnet ef migrations add InitialCreate --project src/AI-Ecommerce.Data --startup-project src/AI-Ecommerce.Api
+
+# 4. Apply migration to database
+dotnet ef database update --project src/AI-Ecommerce.Data --startup-project src/AI-Ecommerce.Api
+
+#Create the Models
+mkdir src\AI-Ecommerce.Data\Models
+
+#Add Required NuGet Packages to Data Project
+dotnet add src/AI-Ecommerce.Data/AI-Ecommerce.Data.csproj package Microsoft.EntityFrameworkCore.SqlServer --version 8.0.0
+dotnet add src/AI-Ecommerce.Data/AI-Ecommerce.Data.csproj package Microsoft.EntityFrameworkCore.Tools --version 8.0.0
+
+# 6. Restore and Build
+dotnet restore
+dotnet build
+
+#7: Create and Apply Migrations
+dotnet ef migrations add InitialCreate --project src/AI-Ecommerce.Data --startup-project src/AI-Ecommerce.Api
+dotnet ef database update --project src/AI-Ecommerce.Data --startup-project src/AI-Ecommerce.Api
+
+
+#Next Step 
+#1 Verify Tables Exist
+Run this to see the tables:
+sqlcmd -S (localdb)\mssqllocaldb -d AgenticCommerceDB -Q "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'"
+You should see:
+Users
+Products
+Orders
+OrderItems
+__EFMigrationsHistory
+
+#2. 🔐 Add Authentication (JWT)
+dotnet add src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj package Microsoft.AspNetCore.Authentication.JwtBearer --version 8.0.0
+dotnet add src/AI-Ecommerce.Api/AI-Ecommerce.Api.csproj package System.IdentityModel.Tokens.Jwt --version 7.0.0
+
+
+
+
+
+
+
+
+
