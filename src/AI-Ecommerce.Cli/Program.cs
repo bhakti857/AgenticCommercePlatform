@@ -1,9 +1,12 @@
 ﻿using AI_Ecommerce.Agent.Harness;
-using Microsoft.Extensions.AI;  
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using System.ClientModel;
+using DotNetEnv;
+
+Env.Load("../../.env");
 
 var services = new ServiceCollection();
 
@@ -12,24 +15,30 @@ services.AddScoped<AgentHarness>();
 
 services.AddScoped<IChatClient>(sp =>
 {
-    var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-    if (string.IsNullOrEmpty(token))
+    var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
+
+    if (string.IsNullOrEmpty(groqKey))
     {
-        Console.WriteLine("⚠️  GITHUB_TOKEN not set – using mock client.");
+        Console.WriteLine("⚠️  GROQ_API_KEY not set – using mock client.");
         return new MockChatClient();
     }
 
-    Console.WriteLine("✅ Using GitHub Models (gpt-4o-mini)");
-
-    // ✅ Correct order: credential first, then options with Endpoint set
-    var credential = new ApiKeyCredential(token);
+    Console.WriteLine("✅ Using Groq (Llama 3.3 70B)");
+    var credential = new ApiKeyCredential(groqKey);
     var options = new OpenAIClientOptions
     {
-        Endpoint = new Uri("https://models.inference.ai.azure.com")
+        Endpoint = new Uri("https://api.groq.com/openai/v1")
     };
     var client = new OpenAIClient(credential, options);
-    return client.AsChatClient("gpt-4o-mini");
+    IChatClient chatClient = client
+        .GetChatClient("llama-3.1-8b-instant")
+        .AsIChatClient();
+
+    return new ChatClientBuilder(chatClient)
+        .UseFunctionInvocation()
+        .Build();
 });
+
 var provider = services.BuildServiceProvider();
 var agent = provider.GetRequiredService<AgentHarness>();
 

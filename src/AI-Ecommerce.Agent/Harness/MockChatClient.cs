@@ -7,38 +7,30 @@ namespace AI_Ecommerce.Agent.Harness
     {
         private readonly ChatClientMetadata _metadata = new("MockChatClient", new Uri("https://mock"), "Mock");
 
-        public ChatClientMetadata Metadata => _metadata;
-
-        public Task<ChatCompletion> CompleteAsync(
-            IList<ChatMessage> messages,
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
             ChatOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            var completion = GenerateCompletion(messages);
-            return Task.FromResult(completion);
+            var response = GenerateResponse(messages);
+            return Task.FromResult(response);
         }
 
-        public async IAsyncEnumerable<StreamingChatCompletionUpdate> CompleteStreamingAsync(
-            IList<ChatMessage> messages,
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
             ChatOptions? options = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var completion = GenerateCompletion(messages);
-            yield return new StreamingChatCompletionUpdate
-            {
-                Role = ChatRole.Assistant,
-                Text = completion.Message.Text
-            };
+            var response = GenerateResponse(messages);
+            yield return new ChatResponseUpdate(ChatRole.Assistant, response.Text);
             await Task.CompletedTask;
-        }
-
-        public TService? GetService<TService>(object? serviceKey = null) where TService : class
-        {
-            return null;
         }
 
         public object? GetService(Type serviceType, object? serviceKey = null)
         {
+            if (serviceKey is null && serviceType == typeof(ChatClientMetadata))
+                return _metadata;
+
             return null;
         }
 
@@ -46,7 +38,7 @@ namespace AI_Ecommerce.Agent.Harness
         {
         }
 
-        private ChatCompletion GenerateCompletion(IList<ChatMessage> messages)
+        private ChatResponse GenerateResponse(IEnumerable<ChatMessage> messages)
         {
             var lastMessage = messages.LastOrDefault(m => m.Role == ChatRole.User);
             var userMessage = lastMessage?.Text ?? "Hello!";
@@ -65,7 +57,7 @@ namespace AI_Ecommerce.Agent.Harness
             };
 
             var chatMessage = new ChatMessage(ChatRole.Assistant, responseText);
-            return new ChatCompletion([chatMessage]);
+            return new ChatResponse(chatMessage);
         }
     }
 }

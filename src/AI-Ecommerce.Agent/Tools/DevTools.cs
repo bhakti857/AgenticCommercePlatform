@@ -13,8 +13,20 @@ namespace AI_Ecommerce.Agent.Tools
             WriteIndented = true
         };
 
-        private static readonly string _projectRoot = Directory.GetCurrentDirectory();
+        private static readonly string _projectRoot = FindProjectRoot();
 
+        private static string FindProjectRoot()
+        {
+            var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+
+            while (dir != null && !dir.GetFiles("*.slnx").Any() && !dir.GetFiles("*.sln").Any())
+            {
+                dir = dir.Parent;
+            }
+
+            return dir?.FullName
+                ?? throw new DirectoryNotFoundException("Could not locate solution root (no .slnx/.sln file found in any parent directory).");
+        }
         [Description("Read the content of a file in the project.")]
         public static async Task<string> ReadFile(
             [Description("Relative path to the file (e.g., 'src/AI-Ecommerce.Api/Program.cs')")]

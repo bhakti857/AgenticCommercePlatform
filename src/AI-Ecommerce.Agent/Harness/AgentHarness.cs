@@ -15,6 +15,7 @@ namespace AI_Ecommerce.Agent.Harness
             _chatClient = chatClient;
             _logger = logger;
         }
+
         public async Task<string> ProcessMessageAsync(string userId, string message, string sessionId)
         {
             try
@@ -22,9 +23,9 @@ namespace AI_Ecommerce.Agent.Harness
                 if (!_sessionHistory.TryGetValue(sessionId, out var history))
                 {
                     history = new List<ChatMessage>
-            {
-                new ChatMessage(ChatRole.System, GetSystemPrompt(userId))
-            };
+                    {
+                        new ChatMessage(ChatRole.System, GetSystemPrompt(userId))
+                    };
                     _sessionHistory[sessionId] = history;
                 }
 
@@ -34,11 +35,12 @@ namespace AI_Ecommerce.Agent.Harness
                 var chatOptions = new ChatOptions
                 {
                     Tools = GetAgentTools().Cast<AITool>().ToList(),
-                    MaxOutputTokens = 8000,
+                    MaxOutputTokens = 1024,
+                    ToolMode = ChatToolMode.RequireAny,
                 };
 
-                var response = await _chatClient.CompleteAsync(history, chatOptions);
-                var responseText = response.Message.Text ?? "No response generated";
+                var response = await _chatClient.GetResponseAsync(history, chatOptions);
+                var responseText = response.Text ?? "No response generated";
 
                 history.Add(new ChatMessage(ChatRole.Assistant, responseText));
 
@@ -56,6 +58,7 @@ namespace AI_Ecommerce.Agent.Harness
                 return $"Error processing your request: {ex.Message}";
             }
         }
+
         private string GetSystemPrompt(string userId)
         {
             return $"""
@@ -75,7 +78,7 @@ namespace AI_Ecommerce.Agent.Harness
           - Microsoft.AspNetCore.Authentication.JwtBearer: 8.0.0
           - System.IdentityModel.Tokens.Jwt: 7.0.3
           - OpenAI: 2.1.0
-          - Microsoft.Extensions.AI: 9.0.0-preview.9.24507.7
+          - Microsoft.Extensions.AI: 10.9.0
 
         ### Your Capabilities
         1. **Read any file** in the project.
@@ -105,16 +108,17 @@ namespace AI_Ecommerce.Agent.Harness
         - You are working on behalf of this user.
         """;
         }
+
         private List<AIFunction> GetAgentTools()
         {
             return new List<AIFunction>
-    {
-        AIFunctionFactory.Create(DevTools.ReadFile),
-        AIFunctionFactory.Create(DevTools.WriteFile),
-        AIFunctionFactory.Create(DevTools.ListDirectory),
-        AIFunctionFactory.Create(DevTools.SearchCode),
-        AIFunctionFactory.Create(DevTools.ExecuteCommand)
-    };
+            {
+                AIFunctionFactory.Create(DevTools.ReadFile),
+                AIFunctionFactory.Create(DevTools.WriteFile),
+                AIFunctionFactory.Create(DevTools.ListDirectory),
+                AIFunctionFactory.Create(DevTools.SearchCode),
+                AIFunctionFactory.Create(DevTools.ExecuteCommand)
+            };
         }
     }
 }
