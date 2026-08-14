@@ -1,12 +1,18 @@
 using AI_Ecommerce.Agent.Harness;
+using AI_Ecommerce.Agent.Tools;
 using AI_Ecommerce.Api.Services;
 using AI_Ecommerce.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.IdentityModel.Tokens;
+using OpenAI;
+using System.ClientModel;
 using System.Text;
 using System.Text.Json.Serialization;
+using DotNetEnv;
+
+Env.Load("../../.env");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +52,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // 5. Add Authorization
 builder.Services.AddAuthorization();
 
-// ✅ 5b. Add CORS (new)
+// 5b. Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
@@ -62,10 +68,43 @@ builder.Services.AddCors(options =>
 // 6. Register Agent Services
 builder.Services.AddScoped<AgentHarness>();
 
-// Use the mock client for now – no external dependencies
-builder.Services.AddScoped<IChatClient>(_ => new MockChatClient());
+builder.Services.AddScoped<IChatClient>(sp =>
+{
+    var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
+
+    if (string.IsNullOrEmpty(groqKey))
+    {
+        Console.WriteLine("⚠️  GROQ_API_KEY not set – using mock client.");
+        return new MockChatClient();
+    }
+
+    Console.WriteLine("✅ Using Groq (Llama 3.3 70B)");
+    var credential = new ApiKeyCredential(groqKey);
+    var options = new OpenAIClientOptions
+    {
+        Endpoint = new Uri("https://api.groq.com/openai/v1")
+    };
+    var client = new OpenAIClient(credential, options);
+    IChatClient chatClient = client
+        .GetChatClient("llama-3.3-70b-versatile")
+        .AsIChatClient();
+
+    return new ChatClientBuilder(chatClient)
+        .UseFunctionInvocation()
+        .Build();
+});
 
 var app = builder.Build();
+
+// ⚠️ TEMPORARY: auto-approve all writes/commands from the web API.
+// The console-based y/n approval flow doesn't translate to concurrent HTTP requests.
+// TODO: replace with a proper "pending approval" workflow (e.g., return a
+// confirmation token to the frontend, require a follow-up call to execute).
+DevTools.ApprovalHandler = async (description) =>
+{
+    Console.WriteLine($"⚠️  Auto-approved (web API, no interactive gate): {description}");
+    return await Task.FromResult(true);
+};
 
 // 7. Configure Middleware Pipeline
 if (app.Environment.IsDevelopment())
@@ -76,7 +115,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// ✅ 7b. Use CORS (new – must be placed before UseAuthentication and UseAuthorization)
 app.UseCors("AllowReactApp");
 
 app.UseAuthentication();

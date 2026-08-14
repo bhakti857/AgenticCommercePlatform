@@ -13,5 +13,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\AI-Ecommerce.Data\AI-Ecommerce.Data.csproj" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
 	</ItemGroup>
 </Project>

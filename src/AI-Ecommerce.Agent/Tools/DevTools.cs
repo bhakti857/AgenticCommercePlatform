@@ -7,6 +7,10 @@ namespace AI_Ecommerce.Agent.Tools
 {
     public static class DevTools
     {
+        // Set by the host (CLI, web API, etc.) to ask the user for approval.
+        // Return true to proceed, false to cancel.
+        public static Func<string, Task<bool>>? ApprovalHandler { get; set; }
+
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -27,6 +31,7 @@ namespace AI_Ecommerce.Agent.Tools
             return dir?.FullName
                 ?? throw new DirectoryNotFoundException("Could not locate solution root (no .slnx/.sln file found in any parent directory).");
         }
+
         [Description("Read the content of a file in the project.")]
         public static async Task<string> ReadFile(
             [Description("Relative path to the file (e.g., 'src/AI-Ecommerce.Api/Program.cs')")]
@@ -45,6 +50,13 @@ namespace AI_Ecommerce.Agent.Tools
             [Description("Relative path to the file")] string filePath,
             [Description("Content to write to the file")] string content)
         {
+            if (ApprovalHandler != null)
+            {
+                var approved = await ApprovalHandler($"Write to file '{filePath}' ({content.Length} characters)?");
+                if (!approved)
+                    return $"Write to '{filePath}' was cancelled by the user.";
+            }
+
             var fullPath = Path.Combine(_projectRoot, filePath);
             var directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -107,6 +119,13 @@ namespace AI_Ecommerce.Agent.Tools
         public static async Task<string> ExecuteCommand(
             [Description("Command to execute, e.g., 'dotnet build'")] string command)
         {
+            if (ApprovalHandler != null)
+            {
+                var approved = await ApprovalHandler($"Run command: '{command}'?");
+                if (!approved)
+                    return $"Command '{command}' was cancelled by the user.";
+            }
+
             var process = new System.Diagnostics.Process
             {
                 StartInfo = new System.Diagnostics.ProcessStartInfo
