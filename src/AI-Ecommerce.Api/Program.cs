@@ -3,18 +3,37 @@ using AI_Ecommerce.Agent.Tools;
 using AI_Ecommerce.Api.Services;
 using AI_Ecommerce.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.IdentityModel.Tokens;
 using OpenAI;
 using System.ClientModel;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using DotNetEnv;
 
 Env.Load("../../.env");
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Prefer JWT_SECRET from .env / environment over any value baked into
+// appsettings.json — the secret must never be committed to source control.
+var jwtSecretFromEnv = Environment.GetEnvironmentVariable("JWT_SECRET");
+if (!string.IsNullOrWhiteSpace(jwtSecretFromEnv))
+{
+    builder.Configuration["Jwt:Secret"] = jwtSecretFromEnv;
+}
+
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Secret is missing or too short (needs 32+ characters). " +
+        "Set JWT_SECRET in your .env file (see .env.example) — do not hardcode it in appsettings.json.");
+}
 
 // 1. Add Controllers & Swagger
 builder.Services.AddControllers()
@@ -68,6 +87,45 @@ builder.Services.AddCors(options =>
 // 6. Register Agent Services
 builder.Services.AddScoped<AgentHarness>();
 
+// 6b. Rate limiting — protect the login endpoint from brute-force attempts
+// (partitioned per client IP) and the agent chat endpoint from being spammed
+// (partitioned per authenticated user, falling back to IP for anonymous
+// callers). Both use a fixed window with no queueing — excess requests are
+// rejected immediately with 429 rather than delayed.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("agent-chat", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"error\":\"Too many requests. Please try again later.\"}", cancellationToken);
+    };
+});
+
 builder.Services.AddScoped<IChatClient>(sp =>
 {
     var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
@@ -119,6 +177,7 @@ app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 // 8. Seed Database

@@ -20,7 +20,7 @@ namespace AI_Ecommerce.Agent.Harness
             _dbContext = dbContext;
         }
 
-        public async Task<string> ProcessMessageAsync(string userId, string message, string sessionId)
+        public async Task<string> ProcessMessageAsync(string userId, string message, string sessionId, bool allowWriteTools = false)
         {
             try
             {
@@ -31,7 +31,7 @@ namespace AI_Ecommerce.Agent.Harness
 
                 var chatOptions = new ChatOptions
                 {
-                    Tools = GetAgentTools().Cast<AITool>().ToList(),
+                    Tools = GetAgentTools(allowWriteTools).Cast<AITool>().ToList(),
                     MaxOutputTokens = 1024,
                 };
 
@@ -161,16 +161,26 @@ namespace AI_Ecommerce.Agent.Harness
         """;
         }
 
-        private List<AIFunction> GetAgentTools()
+        // Read-only tools are always available. WriteFile/ExecuteCommand can modify
+        // the filesystem or run arbitrary shell commands, so they're only registered
+        // for callers explicitly marked as privileged (e.g. admins, the interactive
+        // CLI) — see ProcessMessageAsync's allowWriteTools parameter.
+        private List<AIFunction> GetAgentTools(bool allowWriteTools)
         {
-            return new List<AIFunction>
+            var tools = new List<AIFunction>
             {
                 AIFunctionFactory.Create(DevTools.ReadFile),
-                AIFunctionFactory.Create(DevTools.WriteFile),
                 AIFunctionFactory.Create(DevTools.ListDirectory),
                 AIFunctionFactory.Create(DevTools.SearchCode),
-                AIFunctionFactory.Create(DevTools.ExecuteCommand)
             };
+
+            if (allowWriteTools)
+            {
+                tools.Add(AIFunctionFactory.Create(DevTools.WriteFile));
+                tools.Add(AIFunctionFactory.Create(DevTools.ExecuteCommand));
+            }
+
+            return tools;
         }
     }
 }

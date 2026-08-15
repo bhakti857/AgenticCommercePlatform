@@ -25,7 +25,7 @@ namespace AI_Ecommerce.Data.Models
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
 
-        public int UserType { get; set; } // 1:MasterAdmin, 2:Admin, 3:Employee, 4:Customer
+        public int UserType { get; set; } // 1:Master Admin, 2:Master, 3:Employee, 4:Customer — see UserType lookup table
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }

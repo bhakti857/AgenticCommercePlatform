@@ -83,7 +83,7 @@ while (true)
 
     try
     {
-        var response = await agent.ProcessMessageAsync(userId, input, sessionId);
+        var response = await agent.ProcessMessageAsync(userId, input, sessionId, allowWriteTools: true);
         Console.WriteLine($"\n{response}\n");
     }
     catch (Exception ex)

@@ -12,6 +12,7 @@ namespace AI_Ecommerce.Data
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<UserType> UserTypes { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
@@ -25,6 +26,17 @@ namespace AI_Ecommerce.Data
             {
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.Property(e => e.UserType).IsRequired();
+            });
+
+            // UserType lookup table — static reference data seeded via migration.
+            modelBuilder.Entity<UserType>(entity =>
+            {
+                entity.HasData(
+                    new UserType { Id = 1, Name = "Master Admin", Description = "Full system access, including agent write/execute tools." },
+                    new UserType { Id = 2, Name = "Master", Description = "Elevated access, including agent write/execute tools." },
+                    new UserType { Id = 3, Name = "Employee", Description = "Internal staff account with standard access." },
+                    new UserType { Id = 4, Name = "Customer", Description = "Default account type for storefront customers." }
+                );
             });
 
             // Product configuration

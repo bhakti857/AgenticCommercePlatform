@@ -84,81 +84,100 @@ public class OrdersController : ControllerBase
     {
         var userId = GetUserId();
 
-        // Validate cart items
-        foreach (var item in request.Items)
-        {
-            var product = await _context.Products.FindAsync(item.ProductId);
-            if (product == null)
-                return BadRequest($"Product {item.ProductId} not found");
-            if (product.StockQuantity < item.Quantity)
-                return BadRequest($"Insufficient stock for {product.Name}");
-        }
+        if (request.Items == null || request.Items.Count == 0)
+            return BadRequest("Order must contain at least one item.");
 
-        // Calculate totals
-        decimal subTotal = 0;
-        var orderItems = new List<OrderItem>();
-        foreach (var item in request.Items)
+        // Wrap validation + stock deduction + order creation in a single
+        // transaction, and deduct stock with an atomic conditional UPDATE
+        // (StockQuantity >= quantity) so concurrent requests for the last
+        // unit of a product can't both succeed and oversell it.
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            var product = await _context.Products.FindAsync(item.ProductId);
-            var unitPrice = product.Price;
-            var totalPrice = unitPrice * item.Quantity;
-            subTotal += totalPrice;
+            decimal subTotal = 0;
+            var orderItems = new List<OrderItem>();
 
-            orderItems.Add(new OrderItem
+            foreach (var item in request.Items)
             {
-                ProductId = item.ProductId,
-                Quantity = item.Quantity,
-                UnitPrice = unitPrice,
-                TotalPrice = totalPrice,
-                ProductSKU = product.SKU,
-                ProductName = product.Name
-            });
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product == null)
+                    return BadRequest($"Product {item.ProductId} not found");
 
-            // Deduct stock
-            product.StockQuantity -= item.Quantity;
-        }
+                if (item.Quantity <= 0)
+                    return BadRequest($"Invalid quantity for product {item.ProductId}");
 
-        var tax = subTotal * 0.10m; // 10% tax
-        var shipping = subTotal > 100 ? 0 : 10;
-        var total = subTotal + tax + shipping;
+                var rowsAffected = await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"UPDATE Products SET StockQuantity = StockQuantity - {item.Quantity} WHERE Id = {item.ProductId} AND StockQuantity >= {item.Quantity}");
 
-        var order = new Order
-        {
-            Id = Guid.NewGuid(),
-            OrderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8)}",
-            CustomerId = userId,
-            SubTotal = subTotal,
-            TaxAmount = tax,
-            ShippingCost = shipping,
-            TotalAmount = total,
-            OrderStatus = "Pending",
-            PaymentStatus = "Pending",
-            OrderItems = orderItems,
-            CreatedAt = DateTime.UtcNow
-        };
+                if (rowsAffected == 0)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest($"Insufficient stock for {product.Name}");
+                }
 
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
+                var unitPrice = product.Price;
+                var totalPrice = unitPrice * item.Quantity;
+                subTotal += totalPrice;
 
-        // Return DTO
-        var orderDto = new OrderDto
-        {
-            Id = order.Id,
-            OrderNumber = order.OrderNumber,
-            TotalAmount = order.TotalAmount,
-            OrderStatus = order.OrderStatus,
-            CreatedAt = order.CreatedAt,
-            Items = order.OrderItems.Select(i => new OrderItemDto
+                orderItems.Add(new OrderItem
+                {
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    UnitPrice = unitPrice,
+                    TotalPrice = totalPrice,
+                    ProductSKU = product.SKU,
+                    ProductName = product.Name
+                });
+            }
+
+            var tax = subTotal * 0.10m; // 10% tax
+            var shipping = subTotal > 100 ? 0 : 10;
+            var total = subTotal + tax + shipping;
+
+            var order = new Order
             {
-                Id = i.Id,
-                ProductName = i.ProductName,
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                TotalPrice = i.TotalPrice
-            }).ToList()
-        };
+                Id = Guid.NewGuid(),
+                OrderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8)}",
+                CustomerId = userId,
+                SubTotal = subTotal,
+                TaxAmount = tax,
+                ShippingCost = shipping,
+                TotalAmount = total,
+                OrderStatus = "Pending",
+                PaymentStatus = "Pending",
+                OrderItems = orderItems,
+                CreatedAt = DateTime.UtcNow
+            };
 
-        return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, orderDto);
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            // Return DTO
+            var orderDto = new OrderDto
+            {
+                Id = order.Id,
+                OrderNumber = order.OrderNumber,
+                TotalAmount = order.TotalAmount,
+                OrderStatus = order.OrderStatus,
+                CreatedAt = order.CreatedAt,
+                Items = order.OrderItems.Select(i => new OrderItemDto
+                {
+                    Id = i.Id,
+                    ProductName = i.ProductName,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                    TotalPrice = i.TotalPrice
+                }).ToList()
+            };
+
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, orderDto);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     // Helper to get current user ID from JWT

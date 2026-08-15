@@ -126,12 +126,19 @@ namespace AI_Ecommerce.Agent.Tools
                     return $"Command '{command}' was cancelled by the user.";
             }
 
+            // The API's Dockerfile/container runs on Linux, while local dev is
+            // typically Windows — cmd.exe only exists on Windows, so pick the
+            // shell based on the actual OS the process is running on.
+            var (fileName, args) = OperatingSystem.IsWindows()
+                ? ("cmd.exe", $"/c {command}")
+                : ("/bin/sh", $"-c \"{command}\"");
+
             var process = new System.Diagnostics.Process
             {
                 StartInfo = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c {command}",
+                    FileName = fileName,
+                    Arguments = args,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     WorkingDirectory = _projectRoot,

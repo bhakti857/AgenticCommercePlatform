@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using AI_Ecommerce.Agent.Harness;
 
 namespace AI_Ecommerce.Api.Controllers;
@@ -24,6 +25,7 @@ public class AgentController : ControllerBase
     }
 
     [HttpPost("chat")]
+    [EnableRateLimiting("agent-chat")]
     public async Task<IActionResult> Chat([FromBody] ChatRequest request)
     {
         // Get the current user ID from the JWT token
@@ -36,8 +38,14 @@ public class AgentController : ControllerBase
         // Generate a session ID if not provided
         var sessionId = request.SessionId ?? Guid.NewGuid().ToString();
 
+        // Only MasterAdmin (1) / Admin (2) users may let the agent write files or
+        // execute shell commands — everyone else gets read-only tools. This limits
+        // the blast radius of the API's auto-approve ApprovalHandler (see Program.cs).
+        var userTypeClaim = User.FindFirst("UserType")?.Value;
+        var allowWriteTools = userTypeClaim == "1" || userTypeClaim == "2";
+
         // Process the message through the agent harness
-        var response = await _agent.ProcessMessageAsync(userId, request.Message, sessionId);
+        var response = await _agent.ProcessMessageAsync(userId, request.Message, sessionId, allowWriteTools);
 
         return Ok(new
         {
