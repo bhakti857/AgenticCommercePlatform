@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using AI_Ecommerce.Data;
-using AI_Ecommerce.Data.Models;
+using AI_Ecommerce.Data.Models.Masters;
 using AI_Ecommerce.Data.Utils;
 using AI_Ecommerce.Api.Services;
 
@@ -29,7 +29,6 @@ public class AuthController : ControllerBase
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
-        public int UserType { get; set; } = 4; // Default: Customer
     }
 
     public class LoginRequest
@@ -43,7 +42,8 @@ public class AuthController : ControllerBase
         public string Token { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
-        public int UserType { get; set; }
+        public string AccountType { get; set; } = string.Empty; // "Customer" or "Employee"
+        public long? UserTypeId { get; set; } // employees only
     }
 
     public class RegisterEmployeeRequest
@@ -53,109 +53,152 @@ public class AuthController : ControllerBase
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
+        public long DepartmentId { get; set; }
 
-        /// <summary>3: Employee, 2: Master, 1: Master Admin. Defaults to Employee.</summary>
-        public int UserType { get; set; } = 3;
+        /// <summary>UserTypeMaster id: 1 MasterAdmin, 2 Admin, 3 Senior, 4 Junior, 5 User. Defaults to User (5).</summary>
+        public long UserTypeId { get; set; } = 5;
     }
 
+    /// <summary>
+    /// Public self-registration — always creates a CustomerMaster row. Employees
+    /// can never be created here; see POST /api/auth/register-employee.
+    /// </summary>
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        if (await _context.CustomerMasters.AnyAsync(c => c.Email == request.Email))
             return BadRequest("Email already exists.");
 
-        // Public self-registration is always a Customer account (4). UserType is
-        // intentionally NOT taken from the request body — otherwise anyone could
-        // self-register as Master Admin. Staff accounts are created separately via
-        // POST /api/auth/register-employee, which requires an authenticated
-        // Master Admin/Master caller.
-        var user = new User
+        var customer = new CustomerMaster
         {
-            Id = Guid.NewGuid(),
             Email = request.Email,
             PasswordHash = PasswordHasher.HashPassword(request.Password),
             FirstName = request.FirstName,
             LastName = request.LastName,
             PhoneNumber = request.PhoneNumber,
-            UserType = 4,
             IsActive = true
         };
 
-        _context.Users.Add(user);
+        _context.CustomerMasters.Add(customer);
         await _context.SaveChangesAsync();
 
-        var token = _jwtService.GenerateToken(user.Id, user.Email, user.UserType);
+        var token = _jwtService.GenerateToken(customer.CustomerId, customer.Email, "Customer", null);
 
         return Ok(new AuthResponse
         {
             Token = token,
-            Email = user.Email,
-            FullName = $"{user.FirstName} {user.LastName}",
-            UserType = user.UserType
+            Email = customer.Email,
+            FullName = $"{customer.FirstName} {customer.LastName}",
+            AccountType = "Customer",
+            UserTypeId = null
         });
     }
 
     /// <summary>
-    /// Creates a staff account (Employee/Master/Master Admin). Restricted to
-    /// callers who are already Master Admin (1) or Master (2) — see the
-    /// [Authorize] + role check below. This does NOT log the caller in; it
-    /// returns the new account's details so an admin can hand off credentials.
+    /// Creates a staff account (EmployeeMaster). Restricted to callers who are
+    /// already MasterAdmin (1) or Admin (2). A caller can only create accounts at
+    /// their own UserTypeId level or lower-privileged ones (i.e. numerically
+    /// greater-or-equal) — this closes the privilege-escalation gap where an
+    /// Admin (2) could previously mint a new MasterAdmin (1) account. Only a
+    /// MasterAdmin may create another MasterAdmin.
     /// </summary>
     [HttpPost("register-employee")]
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> RegisterEmployee(RegisterEmployeeRequest request)
     {
-        var callerUserType = User.FindFirst("UserType")?.Value;
-        if (callerUserType != "1" && callerUserType != "2")
+        var accountType = User.FindFirst("AccountType")?.Value;
+        var callerUserTypeClaim = User.FindFirst("UserTypeId")?.Value;
+        if (accountType != "Employee" || callerUserTypeClaim == null ||
+            !long.TryParse(callerUserTypeClaim, out var callerUserTypeId) ||
+            (callerUserTypeId != 1 && callerUserTypeId != 2))
+        {
+            return Forbid();
+        }
+
+        if (!await _context.UserTypeMasters.AnyAsync(t => t.UserTypeId == request.UserTypeId))
+            return BadRequest("Invalid UserTypeId.");
+
+        // Only a MasterAdmin (1) may create another MasterAdmin. An Admin (2) may
+        // only create UserTypeId >= their own (2, 3, 4, 5) — never a more
+        // privileged account than themselves.
+        if (request.UserTypeId < callerUserTypeId)
             return Forbid();
 
-        if (request.UserType < 1 || request.UserType > 4)
-            return BadRequest("Invalid UserType.");
+        if (!await _context.DepartmentMasters.AnyAsync(d => d.DepartmentId == request.DepartmentId))
+            return BadRequest("Invalid DepartmentId.");
 
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        if (await _context.EmployeeMasters.AnyAsync(e => e.Email == request.Email))
             return BadRequest("Email already exists.");
 
-        var user = new User
+        var callerId = long.Parse(User.FindFirst("sub")!.Value);
+
+        var employee = new EmployeeMaster
         {
-            Id = Guid.NewGuid(),
             Email = request.Email,
             PasswordHash = PasswordHasher.HashPassword(request.Password),
             FirstName = request.FirstName,
             LastName = request.LastName,
             PhoneNumber = request.PhoneNumber,
-            UserType = request.UserType,
+            DepartmentId = request.DepartmentId,
+            UserTypeId = request.UserTypeId,
+            CreatedBy = callerId,
             IsActive = true
         };
 
-        _context.Users.Add(user);
+        _context.EmployeeMasters.Add(employee);
         await _context.SaveChangesAsync();
 
         return Ok(new
         {
-            user.Email,
-            FullName = $"{user.FirstName} {user.LastName}",
-            user.UserType
+            employee.Email,
+            FullName = $"{employee.FirstName} {employee.LastName}",
+            employee.UserTypeId
         });
     }
 
+    /// <summary>
+    /// Single login endpoint for both account types: tries CustomerMaster first,
+    /// then EmployeeMaster. Emails are unique within each table but the two
+    /// tables are independent, so in the rare case the same email exists in both
+    /// (not possible via normal registration flows) the customer record wins.
+    /// </summary>
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-        if (user == null || !PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
-            return Unauthorized("Invalid email or password.");
-
-        user.LastLoginAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        var token = _jwtService.GenerateToken(user.Id, user.Email, user.UserType);
-
-        return Ok(new AuthResponse
+        var customer = await _context.CustomerMasters.FirstOrDefaultAsync(c => c.Email == request.Email);
+        if (customer != null)
         {
-            Token = token,
-            Email = user.Email,
-            FullName = $"{user.FirstName} {user.LastName}",
-            UserType = user.UserType
-        });
+            if (!PasswordHasher.VerifyPassword(request.Password, customer.PasswordHash))
+                return Unauthorized("Invalid email or password.");
+
+            var token = _jwtService.GenerateToken(customer.CustomerId, customer.Email, "Customer", null);
+            return Ok(new AuthResponse
+            {
+                Token = token,
+                Email = customer.Email,
+                FullName = $"{customer.FirstName} {customer.LastName}",
+                AccountType = "Customer",
+                UserTypeId = null
+            });
+        }
+
+        var employee = await _context.EmployeeMasters.FirstOrDefaultAsync(e => e.Email == request.Email);
+        if (employee != null)
+        {
+            if (!PasswordHasher.VerifyPassword(request.Password, employee.PasswordHash))
+                return Unauthorized("Invalid email or password.");
+
+            var employeeToken = _jwtService.GenerateToken(employee.EmployeeId, employee.Email, "Employee", employee.UserTypeId);
+            return Ok(new AuthResponse
+            {
+                Token = employeeToken,
+                Email = employee.Email,
+                FullName = $"{employee.FirstName} {employee.LastName}",
+                AccountType = "Employee",
+                UserTypeId = employee.UserTypeId
+            });
+        }
+
+        return Unauthorized("Invalid email or password.");
     }
 }

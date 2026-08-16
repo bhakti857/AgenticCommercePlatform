@@ -4,21 +4,24 @@ import { Link } from 'react-router-dom';
 import api from '../../api/client';
 
 const roleOptions = [
-  { value: 3, label: 'Employee' },
-  { value: 2, label: 'Master' },
+  { value: 5, label: 'User' },
+  { value: 4, label: 'Junior' },
+  { value: 3, label: 'Senior' },
+  { value: 2, label: 'Admin' },
   { value: 1, label: 'Master Admin' },
 ];
 
 export default function EmployeeRegister() {
   const { user } = useAuth();
-  const isAuthorized = user?.userType === 1 || user?.userType === 2;
+  const isAuthorized = user?.accountType === 'Employee' && (user?.userTypeId === 1 || user?.userTypeId === 2);
 
   const [form, setForm] = useState({
     email: '',
     password: '',
     firstName: '',
     lastName: '',
-    userType: 3,
+    departmentId: 2,
+    userTypeId: 5,
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -32,7 +35,7 @@ export default function EmployeeRegister() {
     try {
       const res = await api.post('/auth/register-employee', form);
       setSuccess(`Account created for ${res.data.fullName} (${res.data.email}).`);
-      setForm({ email: '', password: '', firstName: '', lastName: '', userType: 3 });
+      setForm({ email: '', password: '', firstName: '', lastName: '', departmentId: 2, userTypeId: 5 });
     } catch (err: any) {
       setError(
         err?.response?.status === 403
@@ -130,12 +133,24 @@ export default function EmployeeRegister() {
             />
           </div>
           <div>
+            <label htmlFor="emp-department" className="label">Department</label>
+            <select
+              id="emp-department"
+              className="input-field"
+              value={form.departmentId}
+              onChange={e => setForm({ ...form, departmentId: Number(e.target.value) })}
+            >
+              <option value={1}>CEO</option>
+              <option value={2}>Software Developer</option>
+            </select>
+          </div>
+          <div>
             <label htmlFor="emp-role" className="label">Role</label>
             <select
               id="emp-role"
               className="input-field"
-              value={form.userType}
-              onChange={e => setForm({ ...form, userType: Number(e.target.value) })}
+              value={form.userTypeId}
+              onChange={e => setForm({ ...form, userTypeId: Number(e.target.value) })}
             >
               {roleOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>

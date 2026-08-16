@@ -14,18 +14,32 @@ namespace AI_Ecommerce.Api.Services
             _config = config;
         }
 
-        public string GenerateToken(Guid userId, string email, int userType)
+        /// <summary>
+        /// Generates a JWT for either account type. <paramref name="accountId"/> is the
+        /// long primary key (CustomerMaster.CustomerId or EmployeeMaster.EmployeeId) and
+        /// is placed in the `sub`/NameIdentifier claim so controllers can parse it as a
+        /// long. <paramref name="accountType"/> is "Customer" or "Employee" — used by the
+        /// agent endpoint to reject customers outright. <paramref name="userTypeId"/> is
+        /// only set for employees (maps to UserTypeMaster: 1 MasterAdmin, 2 Admin, 3
+        /// Senior, 4 Junior, 5 User) and is null for customers.
+        /// </summary>
+        public string GenerateToken(long accountId, string email, string accountType, long? userTypeId)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Secret"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claimsList = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, accountId.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, accountId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, email),
-                new Claim("UserType", userType.ToString()),
+                new Claim("AccountType", accountType),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+            if (userTypeId.HasValue)
+                claimsList.Add(new Claim("UserTypeId", userTypeId.Value.ToString()));
+
+            var claims = claimsList.ToArray();
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],

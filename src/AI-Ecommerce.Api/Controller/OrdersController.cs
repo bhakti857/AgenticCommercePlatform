@@ -180,12 +180,16 @@ public class OrdersController : ControllerBase
         }
     }
 
-    // Helper to get current user ID from JWT
-    private Guid GetUserId()
+    // Helper to get current customer ID from JWT (orders belong to customers only)
+    private long GetUserId()
     {
+        var accountType = User.FindFirst("AccountType")?.Value;
+        if (accountType != "Customer")
+            throw new UnauthorizedAccessException("Only customer accounts can place/view orders.");
+
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                        ?? User.FindFirst("sub")?.Value;
-        return Guid.Parse(userIdClaim);
+        return long.Parse(userIdClaim!);
     }
 }
 

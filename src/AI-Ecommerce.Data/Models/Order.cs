@@ -13,7 +13,7 @@ namespace AI_Ecommerce.Data.Models
         public string OrderNumber { get; set; } = string.Empty;
 
         [Required]
-        public Guid CustomerId { get; set; }
+        public long CustomerId { get; set; }
 
         public DateTime OrderDate { get; set; } = DateTime.UtcNow;
 
@@ -42,7 +42,7 @@ namespace AI_Ecommerce.Data.Models
         [MaxLength(50)]
         public string PaymentStatus { get; set; } = "Pending";
 
-        public Guid? ProcessedBy { get; set; }
+        public long? ProcessedBy { get; set; } // EmployeeId of staff member who processed the order
         public DateTime? ShippedDate { get; set; }
         public DateTime? DeliveredDate { get; set; }
         public DateTime? CancelledDate { get; set; }
@@ -51,8 +51,7 @@ namespace AI_Ecommerce.Data.Models
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties (optional)
-        public User? Customer { get; set; }
-        public User? Processor { get; set; }
+        public Masters.CustomerMaster? Customer { get; set; }
         public List<OrderItem>? OrderItems { get; set; }
     }
 }

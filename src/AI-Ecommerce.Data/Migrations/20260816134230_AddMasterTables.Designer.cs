@@ -4,6 +4,7 @@ using AI_Ecommerce.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI_Ecommerce.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260816134230_AddMasterTables")]
+    partial class AddMasterTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -905,8 +908,8 @@ namespace AI_Ecommerce.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<long>("CustomerId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DeliveredDate")
                         .HasColumnType("datetime2");
@@ -932,8 +935,8 @@ namespace AI_Ecommerce.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<long?>("ProcessedBy")
-                        .HasColumnType("bigint");
+                    b.Property<Guid?>("ProcessedBy")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("ShippedDate")
                         .HasColumnType("datetime2");
@@ -961,6 +964,8 @@ namespace AI_Ecommerce.Data.Migrations
                         .IsUnique();
 
                     b.HasIndex("OrderStatus");
+
+                    b.HasIndex("ProcessedBy");
 
                     b.ToTable("Orders");
                 });
@@ -1064,6 +1069,106 @@ namespace AI_Ecommerce.Data.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("AI_Ecommerce.Data.Models.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("AI_Ecommerce.Data.Models.UserType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Full system access, including agent write/execute tools.",
+                            Name = "Master Admin"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Elevated access, including agent write/execute tools.",
+                            Name = "Master"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Description = "Internal staff account with standard access.",
+                            Name = "Employee"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Description = "Default account type for storefront customers.",
+                            Name = "Customer"
+                        });
+                });
+
             modelBuilder.Entity("AI_Ecommerce.Data.Models.Masters.CustomerLogTable", b =>
                 {
                     b.HasOne("AI_Ecommerce.Data.Models.Masters.CustomerMaster", "Customer")
@@ -1150,13 +1255,20 @@ namespace AI_Ecommerce.Data.Migrations
 
             modelBuilder.Entity("AI_Ecommerce.Data.Models.Order", b =>
                 {
-                    b.HasOne("AI_Ecommerce.Data.Models.Masters.CustomerMaster", "Customer")
+                    b.HasOne("AI_Ecommerce.Data.Models.User", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AI_Ecommerce.Data.Models.User", "Processor")
+                        .WithMany()
+                        .HasForeignKey("ProcessedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Customer");
+
+                    b.Navigation("Processor");
                 });
 
             modelBuilder.Entity("AI_Ecommerce.Data.Models.OrderItem", b =>

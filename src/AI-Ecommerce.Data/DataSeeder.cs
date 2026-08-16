@@ -1,4 +1,5 @@
 ﻿using AI_Ecommerce.Data.Models;
+using AI_Ecommerce.Data.Models.Masters;
 using AI_Ecommerce.Data.Utils;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,8 +9,8 @@ namespace AI_Ecommerce.Data
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
-            // Seed MasterAdmin if not exists
-            if (!await context.Users.AnyAsync(u => u.UserType == 1))
+            // Seed MasterAdmin (EmployeeMaster, UserTypeId 1) if not exists
+            if (!await context.EmployeeMasters.AnyAsync(e => e.UserTypeId == 1))
             {
                 // Never hardcode a known admin password — generate a random one per
                 // environment and print it once so the operator can log in and
@@ -17,17 +18,17 @@ namespace AI_Ecommerce.Data
                 // assumed to be the trusted operator.
                 var generatedPassword = GenerateRandomPassword();
 
-                var masterAdmin = new User
+                var masterAdmin = new EmployeeMaster
                 {
-                    Id = Guid.NewGuid(),
                     Email = "masteradmin@example.com",
                     PasswordHash = PasswordHasher.HashPassword(generatedPassword),
                     FirstName = "Master",
                     LastName = "Admin",
-                    UserType = 1,
+                    DepartmentId = 1, // CEO
+                    UserTypeId = 1, // MasterAdmin
                     IsActive = true
                 };
-                context.Users.Add(masterAdmin);
+                context.EmployeeMasters.Add(masterAdmin);
                 await context.SaveChangesAsync();
 
                 Console.WriteLine();

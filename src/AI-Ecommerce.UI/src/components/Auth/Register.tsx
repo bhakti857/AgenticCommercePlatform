@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function Register() {
-  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '', userType: 4 });
+  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { register } = useAuth();
