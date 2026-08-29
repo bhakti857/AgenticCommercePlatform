@@ -1,23 +1,30 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
+interface CatalogProduct {
+  productId: number;
+  productCode: string;
+  productName: string;
   category: string;
-  stockQuantity: number;
+  subCategory: string;
+  unit: string;
+  sellingPrice: number;
+  gstPercent: number;
+  availableQuantity: number;
 }
 
 export default function ProductList() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
     api
-      .get('/products')
+      .get('/catalog')
       .then(res => {
         if (mounted) setProducts(res.data);
       })
@@ -32,10 +39,34 @@ export default function ProductList() {
     };
   }, []);
 
+  const addToCart = async (productId: number) => {
+    try {
+      await api.post('/cart/items', { productId, quantity: 1 });
+      setMessage('Added to cart.');
+      setTimeout(() => setMessage(null), 2000);
+    } catch (err: any) {
+      setMessage(err?.response?.data ?? 'Could not add to cart.');
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-primary">Products</h1>
-      <p className="mt-1 text-sm text-secondary">Browse our current catalog and stock levels.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Products</h1>
+          <p className="mt-1 text-sm text-secondary">Browse our current catalog and stock levels.</p>
+        </div>
+        <button onClick={() => navigate('/cart')} className="btn-secondary">
+          View Cart
+        </button>
+      </div>
+
+      {message && (
+        <p role="alert" className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {message}
+        </p>
+      )}
 
       {loading && (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-live="polite">
@@ -62,13 +93,23 @@ export default function ProductList() {
       {!loading && !error && products.length > 0 && (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map(p => (
-            <div key={p.id} className="card flex flex-col p-5">
-              <h2 className="font-semibold text-primary">{p.name}</h2>
-              <p className="mt-1 text-xs uppercase tracking-wide text-secondary">{p.category}</p>
-              <p className="mt-3 text-xl font-bold text-accent">${p.price.toFixed(2)}</p>
-              <p className={`mt-2 text-sm ${p.stockQuantity > 0 ? 'text-secondary' : 'text-red-600'}`}>
-                {p.stockQuantity > 0 ? `In stock: ${p.stockQuantity}` : 'Out of stock'}
+            <div key={p.productId} className="card flex flex-col p-5">
+              <h2 className="font-semibold text-primary">{p.productName}</h2>
+              <p className="mt-1 text-xs uppercase tracking-wide text-secondary">
+                {p.category}
+                {p.subCategory ? ` / ${p.subCategory}` : ''}
               </p>
+              <p className="mt-3 text-xl font-bold text-accent">${p.sellingPrice.toFixed(2)}</p>
+              <p className={`mt-2 text-sm ${p.availableQuantity > 0 ? 'text-secondary' : 'text-red-600'}`}>
+                {p.availableQuantity > 0 ? `In stock: ${p.availableQuantity} ${p.unit}` : 'Out of stock'}
+              </p>
+              <button
+                onClick={() => addToCart(p.productId)}
+                disabled={p.availableQuantity <= 0}
+                className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Add to Cart
+              </button>
             </div>
           ))}
         </div>

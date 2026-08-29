@@ -172,6 +172,7 @@ public class AuthController : ControllerBase
                 return Unauthorized("Invalid email or password.");
 
             var token = _jwtService.GenerateToken(customer.CustomerId, customer.Email, "Customer", null);
+            await Services.LoginAudit.RecordAsync(_context, HttpContext, customerId: customer.CustomerId, employeeId: null, token);
             return Ok(new AuthResponse
             {
                 Token = token,
@@ -189,6 +190,7 @@ public class AuthController : ControllerBase
                 return Unauthorized("Invalid email or password.");
 
             var employeeToken = _jwtService.GenerateToken(employee.EmployeeId, employee.Email, "Employee", employee.UserTypeId);
+            await Services.LoginAudit.RecordAsync(_context, HttpContext, customerId: null, employeeId: employee.EmployeeId, employeeToken);
             return Ok(new AuthResponse
             {
                 Token = employeeToken,

@@ -7,7 +7,11 @@ import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import EmployeeRegister from './components/Auth/EmployeeRegister';
 import ProductList from './components/Products/ProductList';
-import OrderForm from './components/Orders/OrderForm';
+import CartPage from './components/Cart/CartPage';
+import OrderTracking from './components/Orders/OrderTracking';
+import ProfilePage from './components/Profile/ProfilePage';
+import DashboardPage from './components/Dashboard/DashboardPage';
+import MasterPage from './components/Masters/MasterPage';
 import Chat from './components/Agent/Chat';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -111,10 +115,50 @@ function App() {
                 }
               />
               <Route
+                path="/cart"
+                element={
+                  <PrivateRoute>
+                    <CartPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
                 path="/orders"
                 element={
                   <PrivateRoute>
-                    <OrderForm />
+                    <OrderTracking />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <PrivateRoute>
+                    <ProfilePage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <PrivateRoute>
+                    <DashboardPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/masters"
+                element={
+                  <PrivateRoute>
+                    <MasterPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/masters/:entity"
+                element={
+                  <PrivateRoute>
+                    <MasterPage />
                   </PrivateRoute>
                 }
               />

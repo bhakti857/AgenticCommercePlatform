@@ -3,16 +3,22 @@ import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navLinks = [
-  { to: '/', label: 'Home' },
-  { to: '/products', label: 'Products' },
-  { to: '/orders', label: 'Orders' },
-  { to: '/agent', label: 'Agent' },
+  { to: '/', label: 'Home', roles: ['Customer', 'Employee'] },
+  { to: '/products', label: 'Products', roles: ['Customer', 'Employee'] },
+  { to: '/cart', label: 'Cart', roles: ['Customer'] },
+  { to: '/orders', label: 'Orders', roles: ['Customer', 'Employee'] },
+  { to: '/dashboard', label: 'Dashboard', roles: ['Employee'] },
+  { to: '/masters', label: 'Masters', roles: ['Employee'] },
+  { to: '/agent', label: 'Agent', roles: ['Employee'] },
+  { to: '/profile', label: 'Profile', roles: ['Customer', 'Employee'] },
 ];
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const links = navLinks.filter(l => !user || l.roles.includes(user.accountType));
 
   const handleLogout = () => {
     logout();
@@ -35,7 +41,7 @@ export default function Header() {
 
         {token && (
           <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
-            {navLinks.map(link => (
+            {links.map(link => (
               <NavLink key={link.to} to={link.to} end={link.to === '/'} className={linkClasses}>
                 {link.label}
               </NavLink>
@@ -86,7 +92,7 @@ export default function Header() {
         <div className="border-t border-muted bg-surface px-4 py-3 md:hidden">
           <nav className="flex flex-col gap-1" aria-label="Mobile">
             {token &&
-              navLinks.map(link => (
+              links.map(link => (
                 <NavLink
                   key={link.to}
                   to={link.to}
