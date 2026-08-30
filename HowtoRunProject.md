@@ -111,6 +111,22 @@ This creates the `AgenticCommerceDB` schema. The app also seeds a
 MasterAdmin user and a few sample products automatically on first run (see
 console output for the generated admin password — it's only printed once).
 
+> `dotnet ef database update` only creates the **schema** (tables and columns).
+> It does **not** copy records. If you want this machine to have the *current
+> data* (orders, products, ledgers, etc.) from another machine, apply the
+> committed record snapshot next:
+
+```bash
+sqlcmd -S localhost,1433 -U sa -P 'YourStrong!Passw0rd' \
+  -d AgenticCommerceDB -i scripts/seed-data.sql
+```
+
+(If `sqlcmd` isn't on your PATH, run it from
+`C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\SQLCMD.EXE`.)
+This re-loads every user table's rows so the DB matches the exporting machine.
+See `docs/DATABASE_PORTABILITY.md` for details, including how to regenerate the
+snapshot.
+
 ---
 
 ## 6. Run the project
