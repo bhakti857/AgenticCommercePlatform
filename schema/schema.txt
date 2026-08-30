@@ -1,5 +1,5 @@
 AgenticCommerce Platform - Database Schema
-Generated from database 'AgenticCommerceDB' on 2026-08-30 20:57:59
+Generated from database 'AgenticCommerceDB' on 2026-08-30 22:04:12
 Contains CREATE TABLE DDL for every user table (records live in data.xlsx / seed-data.sql).
 ================================================================================
 

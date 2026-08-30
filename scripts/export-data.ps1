@@ -232,24 +232,32 @@ try {
         else { $ws = $wb.Worksheets.Add([System.Reflection.Missing]::Value, $wb.Worksheets.Item($wb.Worksheets.Count)) }
         $ws.Name = $t.Substring(0, [Math]::Min(31, $t.Length))
 
-        for ($i = 0; $i -lt $cols.Count; $i++) { $ws.Cells.Item(1, $i + 1).Value2 = $cols[$i].Name }
         $cmd = $conn.CreateCommand()
         $cmd.CommandText = "SELECT * FROM [$t]"
         $dr = $cmd.ExecuteReader()
         $nCols = $dr.FieldCount
-        $row = 2
+        $cap = 16
+        $data = New-Object 'object[,]' $cap, $nCols
+        for ($i = 0; $i -lt $nCols; $i++) { $data[0, $i] = $cols[$i].Name }
+        $r = 1
         while ($dr.Read()) {
+            if ($r -ge $cap) { $old = $data; $cap *= 2; $data = New-Object 'object[,]' $cap, $nCols; [Array]::Copy($old, $data, $old.Length) }
             for ($i = 0; $i -lt $nCols; $i++) {
                 if ($dr.IsDBNull($i)) { continue }
                 $v = $dr.GetValue($i)
                 if ($v -is [byte[]]) { $v = [System.Text.Encoding]::UTF8.GetString($v) }
-                if ($v -is [DateTime]) { $v = $v.ToString("yyyy-MM-dd HH:mm:ss.fffffff") }
-                $ws.Cells.Item($row, $i + 1).Value2 = $v
+                elseif ($v -is [DateTime]) { $v = $v.ToString("yyyy-MM-dd HH:mm:ss.fffffff") }
+                elseif ($v -is [bool]) { $v = 1 -band [int][bool]$v }
+                $data[$r, $i] = $v
             }
-            $row++
+            $r++
         }
         $dr.Close()
-        $ws.Columns.Item(1).AutoFit() | Out-Null
+        if ($r -ge 2) {
+            $range = $ws.Range($ws.Cells.Item(1, 1), $ws.Cells.Item($r - 1, $nCols))
+            $range.Value2 = $data
+        }
+        $ws.Columns.AutoFit() | Out-Null
     }
     if (Test-Path $xlsxOut) { Remove-Item $xlsxOut -Force }
     $wb.SaveAs($xlsxOut, 51)
