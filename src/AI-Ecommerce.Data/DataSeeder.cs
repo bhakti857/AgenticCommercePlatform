@@ -10,21 +10,29 @@ namespace AI_Ecommerce.Data
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
-            // Seed MasterAdmin (EmployeeMaster, UserTypeId 1) if not exists
-            if (!await context.EmployeeMasters.AnyAsync(e => e.UserTypeId == 1))
-            {
-                // Never hardcode a known admin password — generate a random one per
-                // environment and print it once so the operator can log in and
-                // change it. Anyone who can read the console/logs at seed time is
-                // assumed to be the trusted operator.
-                var generatedPassword = GenerateRandomPassword();
+            // Seed a deterministic MasterAdmin (EmployeeMaster, UserTypeId 1) so the
+            // same login exists identically on every machine that runs migrations +
+            // seed. This lets the database baseline travel with the repo via git: any
+            // machine becomes a self-hosted copy after `dotnet ef database update` +
+            // startup seed.
+            //
+            // SECURITY NOTE: The credential below is intentionally FIXED and committed
+            // so it is identical across environments. That means the password is
+            // published in the repo and must be treated as a dev/demo credential.
+            // Change the password after first login for any real (non-demo) use.
+            const string masterAdminEmail = "bhaktiraut857@gmail.com";
+            const string masterAdminPassword = "Saiyukta@1";
 
+            var existingAdmin = await context.EmployeeMasters
+                .FirstOrDefaultAsync(e => e.Email == masterAdminEmail);
+            if (existingAdmin == null)
+            {
                 var masterAdmin = new EmployeeMaster
                 {
-                    Email = "masteradmin@example.com",
-                    PasswordHash = PasswordHasher.HashPassword(generatedPassword),
-                    FirstName = "Master",
-                    LastName = "Admin",
+                    Email = masterAdminEmail,
+                    PasswordHash = PasswordHasher.HashPassword(masterAdminPassword),
+                    FirstName = "Bhaktiraut",
+                    LastName = "Raut",
                     DepartmentId = 1, // CEO
                     UserTypeId = 1, // MasterAdmin
                     IsActive = true
@@ -34,11 +42,9 @@ namespace AI_Ecommerce.Data
 
                 Console.WriteLine();
                 Console.WriteLine("============================================================");
-                Console.WriteLine(" Seeded MasterAdmin account (first run only):");
-                Console.WriteLine($"   Email:    {masterAdmin.Email}");
-                Console.WriteLine($"   Password: {generatedPassword}");
-                Console.WriteLine(" Log in and change this password immediately — it will not");
-                Console.WriteLine(" be shown again.");
+                Console.WriteLine(" Seeded fixed MasterAdmin account (portable baseline):");
+                Console.WriteLine($"   Email:    {masterAdminEmail}");
+                Console.WriteLine("   Password: <fixed per DataSeeder - change after first login>");
                 Console.WriteLine("============================================================");
                 Console.WriteLine();
             }
@@ -155,15 +161,6 @@ namespace AI_Ecommerce.Data
                 }
                 await context.SaveChangesAsync();
             }
-        }
-
-        private static string GenerateRandomPassword()
-        {
-            // 24 random bytes -> 32-char base64-ish string, then ensure it satisfies
-            // typical complexity rules by appending a fixed set of required classes.
-            var bytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(18);
-            var random = Convert.ToBase64String(bytes).Replace("+", "A").Replace("/", "b").Replace("=", "9");
-            return $"{random}!1";
         }
     }
 }
