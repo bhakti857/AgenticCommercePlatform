@@ -1,0 +1,536 @@
+AgenticCommerce Platform - Database Schema
+Generated from database 'AgenticCommerceDB' on 2026-08-30 20:57:59
+Contains CREATE TABLE DDL for every user table (records live in data.xlsx / seed-data.sql).
+================================================================================
+
+CREATE TABLE [CartItems] (
+    [CartItemId] bigint IDENTITY(1,1) NOT NULL,
+    [CartId] bigint NOT NULL,
+    [ProductId] int NOT NULL,
+    [Quantity] int NOT NULL,
+    [AddedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([CartItemId])
+);
+
+CREATE TABLE [Carts] (
+    [CartId] bigint IDENTITY(1,1) NOT NULL,
+    [CustomerId] bigint NOT NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([CartId])
+);
+
+CREATE TABLE [CategoryMasters] (
+    [CategoryId] int IDENTITY(1,1) NOT NULL,
+    [CategoryName] nvarchar(300) NOT NULL,
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([CategoryId])
+);
+
+CREATE TABLE [CreditNoteItems] (
+    [CreditNoteItemId] bigint IDENTITY(1,1) NOT NULL,
+    [CreditNoteId] bigint NOT NULL,
+    [SalesOrderItemId] bigint,
+    [ProductId] int,
+    [Quantity] int NOT NULL,
+    [UnitPrice] decimal(18,2) NOT NULL,
+    [TotalPrice] decimal(18,2) NOT NULL,
+    PRIMARY KEY ([CreditNoteItemId])
+);
+
+CREATE TABLE [CreditNotes] (
+    [CreditNoteId] bigint IDENTITY(1,1) NOT NULL,
+    [CreditNoteNo] nvarchar(100) NOT NULL,
+    [SalesOrderId] bigint NOT NULL,
+    [CustomerId] bigint NOT NULL,
+    [NoteDate] datetime2 NOT NULL,
+    [Reason] nvarchar(1000),
+    [TotalAmount] decimal(18,2) NOT NULL,
+    [Status] nvarchar(40) NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([CreditNoteId])
+);
+
+CREATE TABLE [CustomerMasters] (
+    [CustomerId] bigint IDENTITY(1,1) NOT NULL,
+    [UniqueId] uniqueidentifier NOT NULL,
+    [Email] nvarchar(510) NOT NULL,
+    [PasswordHash] nvarchar(max) NOT NULL,
+    [FirstName] nvarchar(200) NOT NULL,
+    [LastName] nvarchar(200) NOT NULL,
+    [PhoneNumber] nvarchar(40),
+    [AddressLine] nvarchar(510),
+    [City] nvarchar(200),
+    [State] nvarchar(200),
+    [Country] nvarchar(200),
+    [Pincode] nvarchar(40),
+    [IsActive] bit NOT NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2,
+    [DeletedAt] datetime2,
+    PRIMARY KEY ([CustomerId])
+);
+
+CREATE TABLE [DebitNoteItems] (
+    [DebitNoteItemId] bigint IDENTITY(1,1) NOT NULL,
+    [DebitNoteId] bigint NOT NULL,
+    [PurchaseOrderItemId] bigint,
+    [ProductId] int,
+    [RawMaterialId] int,
+    [Quantity] int NOT NULL,
+    [UnitPrice] decimal(18,2) NOT NULL,
+    [TotalPrice] decimal(18,2) NOT NULL,
+    PRIMARY KEY ([DebitNoteItemId])
+);
+
+CREATE TABLE [DebitNotes] (
+    [DebitNoteId] bigint IDENTITY(1,1) NOT NULL,
+    [DebitNoteNo] nvarchar(100) NOT NULL,
+    [PurchaseOrderId] bigint NOT NULL,
+    [VendorId] int NOT NULL,
+    [NoteDate] datetime2 NOT NULL,
+    [Reason] nvarchar(1000),
+    [TotalAmount] decimal(18,2) NOT NULL,
+    [Status] nvarchar(40) NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([DebitNoteId])
+);
+
+CREATE TABLE [DepartmentMasters] (
+    [DepartmentId] bigint IDENTITY(1,1) NOT NULL,
+    [DepartmentName] nvarchar(200) NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([DepartmentId])
+);
+
+CREATE TABLE [EmployeeMasters] (
+    [EmployeeId] bigint IDENTITY(1,1) NOT NULL,
+    [UniqueId] uniqueidentifier NOT NULL,
+    [Email] nvarchar(510) NOT NULL,
+    [PasswordHash] nvarchar(max) NOT NULL,
+    [FirstName] nvarchar(200) NOT NULL,
+    [LastName] nvarchar(200) NOT NULL,
+    [PhoneNumber] nvarchar(40),
+    [DepartmentId] bigint NOT NULL,
+    [UserTypeId] bigint NOT NULL,
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2,
+    [DeletedAt] datetime2,
+    PRIMARY KEY ([EmployeeId])
+);
+
+CREATE TABLE [LedgerEntries] (
+    [LedgerEntryId] bigint IDENTITY(1,1) NOT NULL,
+    [LedgerId] bigint NOT NULL,
+    [EntryDate] datetime2 NOT NULL,
+    [ReferenceType] nvarchar(100) NOT NULL,
+    [ReferenceId] bigint,
+    [Description] nvarchar(1000),
+    [DebitAmount] decimal(18,2) NOT NULL,
+    [CreditAmount] decimal(18,2) NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([LedgerEntryId])
+);
+
+CREATE TABLE [Ledgers] (
+    [LedgerId] bigint IDENTITY(1,1) NOT NULL,
+    [LedgerName] nvarchar(300) NOT NULL,
+    [LedgerType] nvarchar(60) NOT NULL,
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    PRIMARY KEY ([LedgerId])
+);
+
+CREATE TABLE [OrderItems] (
+    [Id] int IDENTITY(1,1) NOT NULL,
+    [OrderId] uniqueidentifier NOT NULL,
+    [ProductId] int NOT NULL,
+    [Quantity] int NOT NULL,
+    [UnitPrice] decimal(18,2) NOT NULL,
+    [TotalPrice] decimal(18,2) NOT NULL,
+    [DiscountAmount] decimal(18,2) NOT NULL,
+    [ProductSKU] nvarchar(100) NOT NULL,
+    [ProductName] nvarchar(400) NOT NULL,
+    PRIMARY KEY ([Id])
+);
+
+CREATE TABLE [Orders] (
+    [Id] uniqueidentifier NOT NULL,
+    [OrderNumber] nvarchar(100) NOT NULL,
+    [OrderDate] datetime2 NOT NULL,
+    [SubTotal] decimal(18,2) NOT NULL,
+    [TaxAmount] decimal(18,2) NOT NULL,
+    [ShippingCost] decimal(18,2) NOT NULL,
+    [DiscountAmount] decimal(18,2) NOT NULL,
+    [TotalAmount] decimal(18,2) NOT NULL,
+    [OrderStatus] nvarchar(100) NOT NULL,
+    [PaymentStatus] nvarchar(100) NOT NULL,
+    [ShippedDate] datetime2,
+    [DeliveredDate] datetime2,
+    [CancelledDate] datetime2,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2,
+    [ProcessedBy] bigint,
+    [CustomerId] bigint NOT NULL,
+    PRIMARY KEY ([Id])
+);
+
+CREATE TABLE [Payments] (
+    [PaymentId] bigint IDENTITY(1,1) NOT NULL,
+    [SalesOrderId] bigint NOT NULL,
+    [CustomerId] bigint NOT NULL,
+    [PaymentDate] datetime2 NOT NULL,
+    [Amount] decimal(18,2) NOT NULL,
+    [PaymentMethod] nvarchar(40) NOT NULL,
+    [Status] nvarchar(40) NOT NULL,
+    [ReferenceNumber] nvarchar(200),
+    [Notes] nvarchar(1000),
+    [CreatedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([PaymentId])
+);
+
+CREATE TABLE [ProductMasters] (
+    [ProductId] int IDENTITY(1,1) NOT NULL,
+    [ProductCode] nvarchar(100) NOT NULL,
+    [ProductName] nvarchar(400) NOT NULL,
+    [CategoryId] int,
+    [SubCategoryId] int,
+    [UnitId] int,
+    [PurchasePrice] decimal(18,2),
+    [SellingPrice] decimal(18,2),
+    [GSTPercent] decimal(5,2),
+    [IsActive] bit NOT NULL,
+    [Approval1By] bigint,
+    [Approval1At] datetime2,
+    [Approval2By] bigint,
+    [Approval2At] datetime2,
+    [Approval3By] bigint,
+    [Approval3At] datetime2,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([ProductId])
+);
+
+CREATE TABLE [Products] (
+    [Id] int IDENTITY(1,1) NOT NULL,
+    [SKU] nvarchar(100) NOT NULL,
+    [Name] nvarchar(400) NOT NULL,
+    [Description] nvarchar(max),
+    [Price] decimal(18,2) NOT NULL,
+    [Cost] decimal(18,2) NOT NULL,
+    [Category] nvarchar(200) NOT NULL,
+    [StockQuantity] int NOT NULL,
+    [IsActive] bit NOT NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2,
+    PRIMARY KEY ([Id])
+);
+
+CREATE TABLE [ProductStocks] (
+    [ProductStockId] bigint IDENTITY(1,1) NOT NULL,
+    [ProductId] int NOT NULL,
+    [WarehouseId] int NOT NULL,
+    [Quantity] decimal(18,3) NOT NULL,
+    [ReservedQuantity] decimal(18,3) NOT NULL,
+    [UpdatedDate] datetime2 NOT NULL,
+    PRIMARY KEY ([ProductStockId])
+);
+
+CREATE TABLE [PurchaseOrderItems] (
+    [PurchaseOrderItemId] bigint IDENTITY(1,1) NOT NULL,
+    [PurchaseOrderId] bigint NOT NULL,
+    [ItemType] nvarchar(40) NOT NULL,
+    [ProductId] int,
+    [RawMaterialId] int,
+    [Quantity] int NOT NULL,
+    [UnitPrice] decimal(18,2) NOT NULL,
+    [TotalPrice] decimal(18,2) NOT NULL,
+    [ItemCode] nvarchar(100) NOT NULL,
+    [ItemName] nvarchar(400) NOT NULL,
+    PRIMARY KEY ([PurchaseOrderItemId])
+);
+
+CREATE TABLE [PurchaseOrders] (
+    [PurchaseOrderId] bigint IDENTITY(1,1) NOT NULL,
+    [PurchaseOrderNo] nvarchar(100) NOT NULL,
+    [VendorId] int NOT NULL,
+    [OrderDate] datetime2 NOT NULL,
+    [SubTotal] decimal(18,2) NOT NULL,
+    [TaxAmount] decimal(18,2) NOT NULL,
+    [TotalAmount] decimal(18,2) NOT NULL,
+    [OrderStatus] nvarchar(60) NOT NULL,
+    [Notes] nvarchar(1000),
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2,
+    PRIMARY KEY ([PurchaseOrderId])
+);
+
+CREATE TABLE [RawMaterialMasters] (
+    [RawMaterialId] int IDENTITY(1,1) NOT NULL,
+    [RawMaterialCode] nvarchar(100) NOT NULL,
+    [RawMaterialName] nvarchar(400) NOT NULL,
+    [UnitId] int,
+    [PurchasePrice] decimal(18,2),
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([RawMaterialId])
+);
+
+CREATE TABLE [RawMaterialStocks] (
+    [RawMaterialStockId] bigint IDENTITY(1,1) NOT NULL,
+    [RawMaterialId] int NOT NULL,
+    [WarehouseId] int NOT NULL,
+    [Quantity] decimal(18,3) NOT NULL,
+    [ReservedQuantity] decimal(18,3) NOT NULL,
+    [UpdatedDate] datetime2 NOT NULL,
+    PRIMARY KEY ([RawMaterialStockId])
+);
+
+CREATE TABLE [Receipts] (
+    [ReceiptId] bigint IDENTITY(1,1) NOT NULL,
+    [ReceiptNo] nvarchar(100) NOT NULL,
+    [PaymentId] bigint NOT NULL,
+    [CustomerId] bigint NOT NULL,
+    [ReceiptDate] datetime2 NOT NULL,
+    [Amount] decimal(18,2) NOT NULL,
+    [Notes] nvarchar(1000),
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([ReceiptId])
+);
+
+CREATE TABLE [SalesOrderItems] (
+    [SalesOrderItemId] bigint IDENTITY(1,1) NOT NULL,
+    [SalesOrderId] bigint NOT NULL,
+    [ProductId] int NOT NULL,
+    [Quantity] int NOT NULL,
+    [UnitPrice] decimal(18,2) NOT NULL,
+    [DiscountAmount] decimal(18,2) NOT NULL,
+    [TotalPrice] decimal(18,2) NOT NULL,
+    [ProductCode] nvarchar(100) NOT NULL,
+    [ProductName] nvarchar(400) NOT NULL,
+    PRIMARY KEY ([SalesOrderItemId])
+);
+
+CREATE TABLE [SalesOrders] (
+    [SalesOrderId] bigint IDENTITY(1,1) NOT NULL,
+    [SalesOrderNo] nvarchar(100) NOT NULL,
+    [CustomerId] bigint NOT NULL,
+    [OrderDate] datetime2 NOT NULL,
+    [SubTotal] decimal(18,2) NOT NULL,
+    [TaxAmount] decimal(18,2) NOT NULL,
+    [DiscountAmount] decimal(18,2) NOT NULL,
+    [ShippingCost] decimal(18,2) NOT NULL,
+    [TotalAmount] decimal(18,2) NOT NULL,
+    [PaymentMethod] nvarchar(40) NOT NULL,
+    [PaymentStatus] nvarchar(40) NOT NULL,
+    [OrderStatus] nvarchar(60) NOT NULL,
+    [BillingAddress] nvarchar(510),
+    [BillingCity] nvarchar(200),
+    [BillingState] nvarchar(200),
+    [BillingCountry] nvarchar(200),
+    [BillingPincode] nvarchar(40),
+    [ShippingAddress] nvarchar(510),
+    [ShippingCity] nvarchar(200),
+    [ShippingState] nvarchar(200),
+    [ShippingCountry] nvarchar(200),
+    [ShippingPincode] nvarchar(40),
+    [Notes] nvarchar(1000),
+    [ProcessedBy] bigint,
+    [ShippedDate] datetime2,
+    [DeliveredDate] datetime2,
+    [CancelledDate] datetime2,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2,
+    PRIMARY KEY ([SalesOrderId])
+);
+
+CREATE TABLE [StockAdjustments] (
+    [StockAdjustmentId] bigint IDENTITY(1,1) NOT NULL,
+    [AdjustmentNo] nvarchar(100) NOT NULL,
+    [ProductId] int NOT NULL,
+    [WarehouseId] int NOT NULL,
+    [AdjustmentType] nvarchar(40) NOT NULL,
+    [Quantity] decimal(18,3) NOT NULL,
+    [Reason] nvarchar(1000),
+    [AdjustedBy] bigint,
+    [AdjustedAt] datetime2 NOT NULL,
+    PRIMARY KEY ([StockAdjustmentId])
+);
+
+CREATE TABLE [StockTransactions] (
+    [StockTransactionId] bigint IDENTITY(1,1) NOT NULL,
+    [ProductId] int NOT NULL,
+    [WarehouseId] int NOT NULL,
+    [TransactionType] nvarchar(60) NOT NULL,
+    [ReferenceId] bigint,
+    [Quantity] int NOT NULL,
+    [TransactionDate] datetime2 NOT NULL,
+    [Notes] nvarchar(1000),
+    [CreatedBy] bigint,
+    PRIMARY KEY ([StockTransactionId])
+);
+
+CREATE TABLE [StockTransfers] (
+    [StockTransferId] bigint IDENTITY(1,1) NOT NULL,
+    [TransferNo] nvarchar(100) NOT NULL,
+    [ProductId] int NOT NULL,
+    [FromWarehouseId] int NOT NULL,
+    [ToWarehouseId] int NOT NULL,
+    [Quantity] decimal(18,3) NOT NULL,
+    [Status] nvarchar(40) NOT NULL,
+    [Notes] nvarchar(1000),
+    [TransferredBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [CompletedAt] datetime2,
+    PRIMARY KEY ([StockTransferId])
+);
+
+CREATE TABLE [SubCategoryMasters] (
+    [SubCategoryId] int IDENTITY(1,1) NOT NULL,
+    [CategoryId] int NOT NULL,
+    [SubCategoryName] nvarchar(300) NOT NULL,
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([SubCategoryId])
+);
+
+CREATE TABLE [UnitMasters] (
+    [UnitId] int IDENTITY(1,1) NOT NULL,
+    [UnitName] nvarchar(100) NOT NULL,
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([UnitId])
+);
+
+CREATE TABLE [UserTypeMasters] (
+    [UserTypeId] bigint IDENTITY(1,1) NOT NULL,
+    [UserTypeName] nvarchar(200) NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([UserTypeId])
+);
+
+CREATE TABLE [VendorMasters] (
+    [VendorId] int IDENTITY(1,1) NOT NULL,
+    [VendorName] nvarchar(400) NOT NULL,
+    [Email] nvarchar(510),
+    [PhoneNumber] nvarchar(40),
+    [Address] nvarchar(510),
+    [City] nvarchar(200),
+    [State] nvarchar(200),
+    [Country] nvarchar(200),
+    [Pincode] nvarchar(40),
+    [GSTNumber] nvarchar(100),
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([VendorId])
+);
+
+CREATE TABLE [WarehouseMasters] (
+    [WarehouseId] int IDENTITY(1,1) NOT NULL,
+    [WarehouseName] nvarchar(300) NOT NULL,
+    [Address] nvarchar(510),
+    [City] nvarchar(200),
+    [State] nvarchar(200),
+    [Pincode] nvarchar(40),
+    [IsActive] bit NOT NULL,
+    [CreatedBy] bigint,
+    [CreatedAt] datetime2 NOT NULL,
+    [ModifiedBy] bigint,
+    [ModifiedAt] datetime2,
+    [DeletedBy] bigint,
+    [DeletedAt] datetime2,
+    [LogId] bigint,
+    PRIMARY KEY ([WarehouseId])
+);
+
+-- Foreign key constraints
+ALTER TABLE [CartItems] ADD CONSTRAINT [FK_CartItems_Carts] FOREIGN KEY ([CartId]) REFERENCES [Carts]([CartId]);
+ALTER TABLE [CartItems] ADD CONSTRAINT [FK_CartItems_ProductMasters] FOREIGN KEY ([ProductId]) REFERENCES [ProductMasters]([ProductId]);
+ALTER TABLE [Carts] ADD CONSTRAINT [FK_Carts_CustomerMasters] FOREIGN KEY ([CustomerId]) REFERENCES [CustomerMasters]([CustomerId]);
+ALTER TABLE [CreditNoteItems] ADD CONSTRAINT [FK_CreditNoteItems_CreditNotes] FOREIGN KEY ([CreditNoteId]) REFERENCES [CreditNotes]([CreditNoteId]);
+ALTER TABLE [CreditNotes] ADD CONSTRAINT [FK_CreditNotes_SalesOrders] FOREIGN KEY ([SalesOrderId]) REFERENCES [SalesOrders]([SalesOrderId]);
+ALTER TABLE [CustomerLogs] ADD CONSTRAINT [FK_CustomerLogs_CustomerMasters] FOREIGN KEY ([CustomerId]) REFERENCES [CustomerMasters]([CustomerId]);
+ALTER TABLE [DebitNoteItems] ADD CONSTRAINT [FK_DebitNoteItems_DebitNotes] FOREIGN KEY ([DebitNoteId]) REFERENCES [DebitNotes]([DebitNoteId]);
+ALTER TABLE [DebitNotes] ADD CONSTRAINT [FK_DebitNotes_PurchaseOrders] FOREIGN KEY ([PurchaseOrderId]) REFERENCES [PurchaseOrders]([PurchaseOrderId]);
+ALTER TABLE [EmployeeLogs] ADD CONSTRAINT [FK_EmployeeLogs_EmployeeMasters] FOREIGN KEY ([EmployeeId]) REFERENCES [EmployeeMasters]([EmployeeId]);
+ALTER TABLE [EmployeeMasters] ADD CONSTRAINT [FK_EmployeeMasters_DepartmentMasters] FOREIGN KEY ([DepartmentId]) REFERENCES [DepartmentMasters]([DepartmentId]);
+ALTER TABLE [EmployeeMasters] ADD CONSTRAINT [FK_EmployeeMasters_UserTypeMasters] FOREIGN KEY ([UserTypeId]) REFERENCES [UserTypeMasters]([UserTypeId]);
+ALTER TABLE [LedgerEntries] ADD CONSTRAINT [FK_LedgerEntries_Ledgers] FOREIGN KEY ([LedgerId]) REFERENCES [Ledgers]([LedgerId]);
+ALTER TABLE [OrderItems] ADD CONSTRAINT [FK_OrderItems_Orders] FOREIGN KEY ([OrderId]) REFERENCES [Orders]([Id]);
+ALTER TABLE [OrderItems] ADD CONSTRAINT [FK_OrderItems_Products] FOREIGN KEY ([ProductId]) REFERENCES [Products]([Id]);
+ALTER TABLE [Orders] ADD CONSTRAINT [FK_Orders_CustomerMasters] FOREIGN KEY ([CustomerId]) REFERENCES [CustomerMasters]([CustomerId]);
+ALTER TABLE [Payments] ADD CONSTRAINT [FK_Payments_SalesOrders] FOREIGN KEY ([SalesOrderId]) REFERENCES [SalesOrders]([SalesOrderId]);
+ALTER TABLE [ProductMasters] ADD CONSTRAINT [FK_ProductMasters_CategoryMasters] FOREIGN KEY ([CategoryId]) REFERENCES [CategoryMasters]([CategoryId]);
+ALTER TABLE [ProductMasters] ADD CONSTRAINT [FK_ProductMasters_SubCategoryMasters] FOREIGN KEY ([SubCategoryId]) REFERENCES [SubCategoryMasters]([SubCategoryId]);
+ALTER TABLE [ProductMasters] ADD CONSTRAINT [FK_ProductMasters_UnitMasters] FOREIGN KEY ([UnitId]) REFERENCES [UnitMasters]([UnitId]);
+ALTER TABLE [ProductStocks] ADD CONSTRAINT [FK_ProductStocks_ProductMasters] FOREIGN KEY ([ProductId]) REFERENCES [ProductMasters]([ProductId]);
+ALTER TABLE [ProductStocks] ADD CONSTRAINT [FK_ProductStocks_WarehouseMasters] FOREIGN KEY ([WarehouseId]) REFERENCES [WarehouseMasters]([WarehouseId]);
+ALTER TABLE [PurchaseOrderItems] ADD CONSTRAINT [FK_PurchaseOrderItems_PurchaseOrders] FOREIGN KEY ([PurchaseOrderId]) REFERENCES [PurchaseOrders]([PurchaseOrderId]);
+ALTER TABLE [PurchaseOrders] ADD CONSTRAINT [FK_PurchaseOrders_VendorMasters] FOREIGN KEY ([VendorId]) REFERENCES [VendorMasters]([VendorId]);
+ALTER TABLE [RawMaterialMasters] ADD CONSTRAINT [FK_RawMaterialMasters_UnitMasters] FOREIGN KEY ([UnitId]) REFERENCES [UnitMasters]([UnitId]);
+ALTER TABLE [RawMaterialStocks] ADD CONSTRAINT [FK_RawMaterialStocks_RawMaterialMasters] FOREIGN KEY ([RawMaterialId]) REFERENCES [RawMaterialMasters]([RawMaterialId]);
+ALTER TABLE [RawMaterialStocks] ADD CONSTRAINT [FK_RawMaterialStocks_WarehouseMasters] FOREIGN KEY ([WarehouseId]) REFERENCES [WarehouseMasters]([WarehouseId]);
+ALTER TABLE [Receipts] ADD CONSTRAINT [FK_Receipts_Payments] FOREIGN KEY ([PaymentId]) REFERENCES [Payments]([PaymentId]);
+ALTER TABLE [SalesOrderItems] ADD CONSTRAINT [FK_SalesOrderItems_SalesOrders] FOREIGN KEY ([SalesOrderId]) REFERENCES [SalesOrders]([SalesOrderId]);
+ALTER TABLE [SalesOrderItems] ADD CONSTRAINT [FK_SalesOrderItems_ProductMasters] FOREIGN KEY ([ProductId]) REFERENCES [ProductMasters]([ProductId]);
+ALTER TABLE [SalesOrders] ADD CONSTRAINT [FK_SalesOrders_CustomerMasters] FOREIGN KEY ([CustomerId]) REFERENCES [CustomerMasters]([CustomerId]);
+ALTER TABLE [SubCategoryMasters] ADD CONSTRAINT [FK_SubCategoryMasters_CategoryMasters] FOREIGN KEY ([CategoryId]) REFERENCES [CategoryMasters]([CategoryId]);
