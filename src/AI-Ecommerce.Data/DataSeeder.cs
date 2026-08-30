@@ -49,6 +49,27 @@ namespace AI_Ecommerce.Data
                 Console.WriteLine();
             }
 
+            // Converge all machines to a single active MasterAdmin: soft-delete any
+            // other MasterAdmin (UserTypeId 1) whose email differs from the intended
+            // one. This removes stale admins left over from older seeders (e.g.
+            // "master@example.com" from the previous random-password seeder) so every
+            // environment ends up with identical data. Soft-delete is used because
+            // EmployeeMaster has a global query filter (DeletedAt == null), so the
+            // removed admin becomes invisible to the app and can no longer log in,
+            // and there are no FK issues.
+            var staleAdmins = await context.EmployeeMasters
+                .Where(e => e.UserTypeId == 1 && e.Email != masterAdminEmail)
+                .ToListAsync();
+            foreach (var stale in staleAdmins)
+            {
+                stale.IsActive = false;
+                stale.DeletedAt = DateTime.UtcNow;
+            }
+            if (staleAdmins.Count > 0)
+            {
+                await context.SaveChangesAsync();
+            }
+
             // Seed a demo customer so the storefront/checkout can be tested immediately.
             if (!await context.CustomerMasters.AnyAsync(c => c.Email == "demo@example.com"))
             {
