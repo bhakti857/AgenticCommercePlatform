@@ -259,13 +259,32 @@ try {
         }
         $ws.Columns.AutoFit() | Out-Null
     }
-    if (Test-Path $xlsxOut) { Remove-Item $xlsxOut -Force }
-    $wb.SaveAs($xlsxOut, 51)
+    $tempXlsx = Join-Path $env:TEMP "export_data_$([guid]::NewGuid().ToString('N').Substring(0,8)).xlsx"
+    $wb.SaveAs($tempXlsx, 51)
     $wb.Close($false)
     $excel.Quit()
     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wb) | Out-Null
     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null
-    Write-Host "  wrote $xlsxOut"
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    $retries = 0
+    while ($retries -lt 5) {
+        try {
+            if (Test-Path $xlsxOut) { Remove-Item $xlsxOut -Force }
+            Move-Item $tempXlsx $xlsxOut -Force
+            break
+        } catch {
+            $retries++
+            Start-Sleep -Seconds 1
+        }
+    }
+    if (Test-Path $tempXlsx) {
+        Copy-Item $tempXlsx "$schemaDir\data_new.xlsx" -Force
+        Remove-Item $tempXlsx -Force -ErrorAction SilentlyContinue
+        Write-Host "  WARNING: Could not replace locked data.xlsx. Wrote schema/data_new.xlsx instead. Close Excel and delete schema/data.xlsx, then rename data_new.xlsx to data.xlsx."
+    } else {
+        Write-Host "  wrote $xlsxOut"
+    }
 } catch {
     $msg = "Excel generation failed: $($_.Exception.Message)`n" + $_.ScriptStackTrace
     Write-Warning $msg

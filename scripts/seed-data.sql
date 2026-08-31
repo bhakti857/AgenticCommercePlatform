@@ -33,6 +33,7 @@ ALTER TABLE [StockAdjustments] NOCHECK CONSTRAINT ALL;
 ALTER TABLE [StockTransactions] NOCHECK CONSTRAINT ALL;
 ALTER TABLE [StockTransfers] NOCHECK CONSTRAINT ALL;
 ALTER TABLE [SubCategoryMasters] NOCHECK CONSTRAINT ALL;
+ALTER TABLE [sysdiagrams] NOCHECK CONSTRAINT ALL;
 ALTER TABLE [UnitMasters] NOCHECK CONSTRAINT ALL;
 ALTER TABLE [UserTypeMasters] NOCHECK CONSTRAINT ALL;
 ALTER TABLE [VendorMasters] NOCHECK CONSTRAINT ALL;
@@ -67,6 +68,7 @@ DELETE FROM [StockAdjustments];
 DELETE FROM [StockTransactions];
 DELETE FROM [StockTransfers];
 DELETE FROM [SubCategoryMasters];
+DELETE FROM [sysdiagrams];
 DELETE FROM [UnitMasters];
 DELETE FROM [UserTypeMasters];
 DELETE FROM [VendorMasters];
@@ -79,9 +81,6 @@ SET IDENTITY_INSERT [Carts] ON;
 SET IDENTITY_INSERT [Carts] OFF;
 
 SET IDENTITY_INSERT [CategoryMasters] ON;
-INSERT INTO [CategoryMasters] ([CategoryId], [CategoryName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'Electronics', 1, NULL, '2026-08-30 11:56:15.4219831', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [CategoryMasters] ([CategoryId], [CategoryName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'Audio', 1, NULL, '2026-08-30 11:56:15.4220307', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [CategoryMasters] ([CategoryId], [CategoryName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'Accessories', 1, NULL, '2026-08-30 11:56:15.4220309', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [CategoryMasters] OFF;
 
 SET IDENTITY_INSERT [CreditNoteItems] ON;
@@ -91,7 +90,6 @@ SET IDENTITY_INSERT [CreditNotes] ON;
 SET IDENTITY_INSERT [CreditNotes] OFF;
 
 SET IDENTITY_INSERT [CustomerMasters] ON;
-INSERT INTO [CustomerMasters] ([CustomerId], [UniqueId], [Email], [PasswordHash], [FirstName], [LastName], [PhoneNumber], [AddressLine], [City], [State], [Country], [Pincode], [IsActive], [CreatedAt], [UpdatedAt], [DeletedAt]) VALUES (1, 'ca9767f0-5de4-4b3a-9fc7-60db8711b352', 'demo@example.com', 'F5D10557CC7C1FB3C30D44E8E4B264D5.87BFFA6B7F0CC44C90091A7E906DD77663C04D3CD90E6A3F3FA484505E2E0C62', 'Demo', 'Customer', '9876543210', '1 Demo Street', 'Pune', 'Maharashtra', 'India', '411001', 1, '2026-08-30 11:56:14.8412025', NULL, NULL);
 SET IDENTITY_INSERT [CustomerMasters] OFF;
 
 SET IDENTITY_INSERT [DebitNoteItems] ON;
@@ -101,12 +99,9 @@ SET IDENTITY_INSERT [DebitNotes] ON;
 SET IDENTITY_INSERT [DebitNotes] OFF;
 
 SET IDENTITY_INSERT [DepartmentMasters] ON;
-INSERT INTO [DepartmentMasters] ([DepartmentId], [DepartmentName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'CEO', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [DepartmentMasters] ([DepartmentId], [DepartmentName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'Software Developer', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [DepartmentMasters] OFF;
 
 SET IDENTITY_INSERT [EmployeeMasters] ON;
-INSERT INTO [EmployeeMasters] ([EmployeeId], [UniqueId], [Email], [PasswordHash], [FirstName], [LastName], [PhoneNumber], [DepartmentId], [UserTypeId], [IsActive], [CreatedBy], [CreatedAt], [UpdatedAt], [DeletedAt]) VALUES (1, '975aa128-b589-4c4b-ad04-c8d55eee7353', 'bhaktiraut857@gmail.com', '9178A0F572499507ABE66D5070F6DF69.E52C1EB07A2A1B42F02E4275536571DC07E6C153F02263AD570103D44BE750F0', 'Bhaktiraut', 'Raut', NULL, 1, 1, 1, NULL, '2026-08-30 11:40:52.0000000', NULL, NULL);
 SET IDENTITY_INSERT [EmployeeMasters] OFF;
 
 SET IDENTITY_INSERT [LedgerEntries] ON;
@@ -123,21 +118,12 @@ SET IDENTITY_INSERT [Payments] ON;
 SET IDENTITY_INSERT [Payments] OFF;
 
 SET IDENTITY_INSERT [ProductMasters] ON;
-INSERT INTO [ProductMasters] ([ProductId], [ProductCode], [ProductName], [CategoryId], [SubCategoryId], [UnitId], [PurchasePrice], [SellingPrice], [GSTPercent], [IsActive], [Approval1By], [Approval1At], [Approval2By], [Approval2At], [Approval3By], [Approval3At], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'PRD-001', 'Laptop', 1, NULL, 1, 700.00, 999.99, 18.00, 1, 1, '2026-08-30 11:56:15.5386139', 1, '2026-08-30 11:56:15.5386139', 1, '2026-08-30 11:56:15.5386139', NULL, '2026-08-30 11:56:15.5387680', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [ProductMasters] ([ProductId], [ProductCode], [ProductName], [CategoryId], [SubCategoryId], [UnitId], [PurchasePrice], [SellingPrice], [GSTPercent], [IsActive], [Approval1By], [Approval1At], [Approval2By], [Approval2At], [Approval3By], [Approval3At], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'PRD-002', 'Smartphone', 1, NULL, 1, 450.00, 699.99, 18.00, 1, 1, '2026-08-30 11:56:15.5386139', 1, '2026-08-30 11:56:15.5386139', 1, '2026-08-30 11:56:15.5386139', NULL, '2026-08-30 11:56:15.5390991', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [ProductMasters] ([ProductId], [ProductCode], [ProductName], [CategoryId], [SubCategoryId], [UnitId], [PurchasePrice], [SellingPrice], [GSTPercent], [IsActive], [Approval1By], [Approval1At], [Approval2By], [Approval2At], [Approval3By], [Approval3At], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'PRD-003', 'Headphones', 2, NULL, 1, 50.00, 89.99, 12.00, 1, 1, '2026-08-30 11:56:15.5386139', 1, '2026-08-30 11:56:15.5386139', 1, '2026-08-30 11:56:15.5386139', NULL, '2026-08-30 11:56:15.5390999', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [ProductMasters] OFF;
 
 SET IDENTITY_INSERT [Products] ON;
-INSERT INTO [Products] ([Id], [SKU], [Name], [Description], [Price], [Cost], [Category], [StockQuantity], [IsActive], [CreatedAt], [UpdatedAt]) VALUES (1, 'P001', 'Laptop', NULL, 999.99, 800.00, 'Electronics', 10, 1, '2026-08-30 11:56:15.7916856', NULL);
-INSERT INTO [Products] ([Id], [SKU], [Name], [Description], [Price], [Cost], [Category], [StockQuantity], [IsActive], [CreatedAt], [UpdatedAt]) VALUES (2, 'P002', 'Smartphone', NULL, 699.99, 500.00, 'Electronics', 15, 1, '2026-08-30 11:56:15.7918096', NULL);
-INSERT INTO [Products] ([Id], [SKU], [Name], [Description], [Price], [Cost], [Category], [StockQuantity], [IsActive], [CreatedAt], [UpdatedAt]) VALUES (3, 'P003', 'Headphones', NULL, 89.99, 60.00, 'Audio', 50, 1, '2026-08-30 11:56:15.7918099', NULL);
 SET IDENTITY_INSERT [Products] OFF;
 
 SET IDENTITY_INSERT [ProductStocks] ON;
-INSERT INTO [ProductStocks] ([ProductStockId], [ProductId], [WarehouseId], [Quantity], [ReservedQuantity], [UpdatedDate]) VALUES (1, 1, 1, 50.000, 0.000, '2026-08-30 11:56:15.7298986');
-INSERT INTO [ProductStocks] ([ProductStockId], [ProductId], [WarehouseId], [Quantity], [ReservedQuantity], [UpdatedDate]) VALUES (2, 2, 1, 50.000, 0.000, '2026-08-30 11:56:15.7432677');
-INSERT INTO [ProductStocks] ([ProductStockId], [ProductId], [WarehouseId], [Quantity], [ReservedQuantity], [UpdatedDate]) VALUES (3, 3, 1, 50.000, 0.000, '2026-08-30 11:56:15.7433498');
 SET IDENTITY_INSERT [ProductStocks] OFF;
 
 SET IDENTITY_INSERT [PurchaseOrderItems] ON;
@@ -173,26 +159,19 @@ SET IDENTITY_INSERT [StockTransfers] OFF;
 SET IDENTITY_INSERT [SubCategoryMasters] ON;
 SET IDENTITY_INSERT [SubCategoryMasters] OFF;
 
+SET IDENTITY_INSERT [sysdiagrams] ON;
+SET IDENTITY_INSERT [sysdiagrams] OFF;
+
 SET IDENTITY_INSERT [UnitMasters] ON;
-INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'Piece', 1, NULL, '2026-08-30 11:56:15.2984811', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'Kg', 1, NULL, '2026-08-30 11:56:15.2985247', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'Litre', 1, NULL, '2026-08-30 11:56:15.2985250', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (4, 'Box', 1, NULL, '2026-08-30 11:56:15.2985252', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [UnitMasters] OFF;
 
 SET IDENTITY_INSERT [UserTypeMasters] ON;
-INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'MasterAdmin', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'Admin', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'Senior', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (4, 'Junior', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
-INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (5, 'User', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [UserTypeMasters] OFF;
 
 SET IDENTITY_INSERT [VendorMasters] ON;
 SET IDENTITY_INSERT [VendorMasters] OFF;
 
 SET IDENTITY_INSERT [WarehouseMasters] ON;
-INSERT INTO [WarehouseMasters] ([WarehouseId], [WarehouseName], [Address], [City], [State], [Pincode], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'Main Warehouse', 'Industrial Area', 'Pune', 'Maharashtra', '411001', 1, NULL, '2026-08-30 11:56:15.1265203', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [WarehouseMasters] OFF;
 
 IF EXISTS (SELECT 1 FROM sys.identity_columns WHERE object_id=OBJECT_ID('CartItems') AND last_value IS NOT NULL)
@@ -251,6 +230,8 @@ IF EXISTS (SELECT 1 FROM sys.identity_columns WHERE object_id=OBJECT_ID('StockTr
 BEGIN DBCC CHECKIDENT ('StockTransfers', RESEED); END
 IF EXISTS (SELECT 1 FROM sys.identity_columns WHERE object_id=OBJECT_ID('SubCategoryMasters') AND last_value IS NOT NULL)
 BEGIN DBCC CHECKIDENT ('SubCategoryMasters', RESEED); END
+IF EXISTS (SELECT 1 FROM sys.identity_columns WHERE object_id=OBJECT_ID('sysdiagrams') AND last_value IS NOT NULL)
+BEGIN DBCC CHECKIDENT ('sysdiagrams', RESEED); END
 IF EXISTS (SELECT 1 FROM sys.identity_columns WHERE object_id=OBJECT_ID('UnitMasters') AND last_value IS NOT NULL)
 BEGIN DBCC CHECKIDENT ('UnitMasters', RESEED); END
 IF EXISTS (SELECT 1 FROM sys.identity_columns WHERE object_id=OBJECT_ID('UserTypeMasters') AND last_value IS NOT NULL)
@@ -290,6 +271,7 @@ ALTER TABLE [StockAdjustments] WITH CHECK CHECK CONSTRAINT ALL;
 ALTER TABLE [StockTransactions] WITH CHECK CHECK CONSTRAINT ALL;
 ALTER TABLE [StockTransfers] WITH CHECK CHECK CONSTRAINT ALL;
 ALTER TABLE [SubCategoryMasters] WITH CHECK CHECK CONSTRAINT ALL;
+ALTER TABLE [sysdiagrams] WITH CHECK CHECK CONSTRAINT ALL;
 ALTER TABLE [UnitMasters] WITH CHECK CHECK CONSTRAINT ALL;
 ALTER TABLE [UserTypeMasters] WITH CHECK CHECK CONSTRAINT ALL;
 ALTER TABLE [VendorMasters] WITH CHECK CHECK CONSTRAINT ALL;
