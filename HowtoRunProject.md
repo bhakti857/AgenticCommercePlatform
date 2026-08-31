@@ -99,7 +99,9 @@ via `docker-compose up -d adminer` if you want to inspect tables visually.
 
 ---
 
-## 5. Apply database migrations
+## 5. Apply database migrations and seed data
+
+### 5a. Create the schema
 
 ```bash
 cd src/AI-Ecommerce.Data
@@ -107,25 +109,42 @@ dotnet ef database update --startup-project ..\AI-Ecommerce.Cli
 cd ../..
 ```
 
-This creates the `AgenticCommerceDB` schema. The app also seeds a
-MasterAdmin user and a few sample products automatically on first run (see
-console output for the generated admin password — it's only printed once).
+This creates the `AgenticCommerceDB` tables. It does **not** insert any data.
 
-> `dotnet ef database update` only creates the **schema** (tables and columns).
-> It does **not** copy records. If you want this machine to have the *current
-> data* (orders, products, ledgers, etc.) from another machine, apply the
-> committed record snapshot next:
+### 5b. Import seed data from Excel
 
-```bash
-sqlcmd -S localhost,1433 -U sa -P 'YourStrong!Passw0rd' \
-  -d AgenticCommerceDB -i scripts/seed-data.sql
+All reference data lives in `schema/data.xlsx`. Import it with:
+
+```powershell
+$env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
+.\scripts\import-from-excel.ps1
 ```
 
-(If `sqlcmd` isn't on your PATH, run it from
-`C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\SQLCMD.EXE`.)
-This re-loads every user table's rows so the DB matches the exporting machine.
-See `docs/DATABASE_PORTABILITY.md` for details, including how to regenerate the
-snapshot.
+This populates every table: users, departments, categories, products,
+warehouses, stock levels, etc. The database is fully ready after this step.
+
+### 5c. Updating seed data
+
+To add or change reference data:
+
+1. Open `schema/data.xlsx` in Excel
+2. Edit the relevant worksheet (one sheet per table)
+3. Re-run the import:
+   ```powershell
+   $env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
+   .\scripts\import-from-excel.ps1
+   ```
+
+To export the current database state back to Excel (e.g. after making
+changes via the app):
+
+```powershell
+$env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
+.\scripts\export-data.ps1
+```
+
+This regenerates `schema/data.xlsx`, `schema/schema.txt`, and
+`scripts/seed-data.sql` from the live database.
 
 ---
 
@@ -201,6 +220,24 @@ git checkout main
 git pull origin main
 ```
 
+After pulling, if database models changed, re-apply migrations and re-import
+seed data:
+
+```bash
+cd src/AI-Ecommerce.Data
+dotnet ef database update --startup-project ..\AI-Ecommerce.Cli
+cd ../..
+$env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
+.\scripts\import-from-excel.ps1
+```
+
+To also refresh the schema docs and Excel snapshot from the live database:
+
+```powershell
+$env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
+.\scripts\export-data.ps1
+```
+
 If you're on a feature branch and want to bring in the latest `main`:
 
 ```bash
@@ -265,6 +302,8 @@ git commit -m "Add migration: <DescriptiveName>"
 | Browser can't reach the API from the React UI | Confirm the API is running on port 5015/5000 and CORS in `Program.cs` allows `http://localhost:5173` (the Vite dev server's default port) |
 | "using mock client" printed in console | The relevant API key (`GROQ_API_KEY` for the API, `OPENROUTER_API_KEY` for the CLI) isn't set in `.env` — the app still runs, just with canned responses instead of a real LLM |
 | SQL Server container won't start / port conflict | Make sure nothing else is using port `1433`, then `docker-compose down` and `docker-compose up -d sql-server` again |
+| Database has tables but no data | Run the Excel import: `$env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'; .\scripts\import-from-excel.ps1` |
+| Excel file locked by another process | Close Excel, then re-run. The import script also checks for a temp copy automatically |
 
 See `AGENTS.md` for deeper architecture/contributor notes, and
 `FutureScope.md` for known gaps and planned improvements.
