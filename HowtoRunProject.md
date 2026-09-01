@@ -212,37 +212,52 @@ dotnet test AI-Ecommerce-Platform.slnx
 ## 8. Git workflow — pushing and pulling code
 
 This repo uses a standard feature-branch + PR workflow against `main`.
+**All seed data lives in `schema/data.xlsx`** — migrations only create the
+schema (tables/columns), never data.
 
-### Pulling the latest changes
+### After pulling — update the database
+
+Always do this after `git pull`, before starting the app:
 
 ```bash
-git checkout main
+# 1. Pull code
 git pull origin main
-```
 
-After pulling, if database models changed, re-apply migrations and re-import
-seed data:
-
-```bash
+# 2. Apply any new migrations (schema only, no data)
 cd src/AI-Ecommerce.Data
 dotnet ef database update --startup-project ..\AI-Ecommerce.Cli
 cd ../..
+
+# 3. Import seed data from Excel (populates all tables)
 $env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
 .\scripts\import-from-excel.ps1
 ```
 
-To also refresh the schema docs and Excel snapshot from the live database:
+The app is now ready to run. If you skipped step 3, the API will print a
+warning listing which tables are empty.
+
+### Before pushing — export database to files
+
+If you made data changes (new products, updated records, etc.), export the
+live database state back to the committed files **before pushing**:
 
 ```powershell
 $env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
 .\scripts\export-data.ps1
 ```
 
-If you're on a feature branch and want to bring in the latest `main`:
+This regenerates all three files from the live database:
+| File | Contents |
+|------|----------|
+| `schema/data.xlsx` | All table records (one worksheet per table) |
+| `schema/schema.txt` | CREATE TABLE DDL for every table |
+| `scripts/seed-data.sql` | T-SQL script to restore all records |
+
+Then commit them:
 
 ```bash
-git checkout your-branch-name
-git pull origin main --rebase
+git add schema/data.xlsx schema/schema.txt scripts/seed-data.sql
+git commit -m "Update schema/data exports from live DB"
 ```
 
 ### Making and pushing changes
@@ -251,44 +266,41 @@ git pull origin main --rebase
 # 1. Create a branch for your change
 git checkout -b your-feature-name
 
-# 2. Make your changes, then stage and commit
+# 2. Make your changes
+
+# 3. If you changed database models, add a migration
+cd src/AI-Ecommerce.Data
+dotnet ef migrations add <DescriptiveName> --startup-project ..\AI-Ecommerce.Cli
+dotnet ef database update --startup-project ..\AI-Ecommerce.Cli
+cd ../..
+
+# 4. Export updated schema/data files
+$env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
+.\scripts\export-data.ps1
+
+# 5. Build to verify
+dotnet build AI-Ecommerce-Platform.slnx
+
+# 6. Stage, commit, push
 git add .
 git commit -m "Describe what you changed and why"
-
-# 3. Push your branch to GitHub
 git push origin your-feature-name
 ```
 
-Then open a Pull Request on GitHub (`bhakti857/AgenticCommercePlatform`)
-targeting `main`, and merge once reviewed.
+Then open a Pull Request on GitHub targeting `main`, and merge once reviewed.
 
-If you're pushing directly to `main` (small/solo changes):
-
-```bash
-git add .
-git commit -m "Describe what you changed and why"
-git push origin main
-```
+If pushing directly to `main` (small/solo changes), same flow — always
+export before committing.
 
 ### Before every push — sanity checklist
 
 - [ ] `.env` is **not** staged (`git status` should never show it — it's
       git-ignored, but double-check if you ever force-add files)
+- [ ] `.\scripts\export-data.ps1` ran successfully (schema + data files updated)
 - [ ] `dotnet build AI-Ecommerce-Platform.slnx` succeeds
-- [ ] Any new/changed entity needs a matching EF Core migration (see below)
+- [ ] Any new/changed entity needs a matching EF Core migration
 - [ ] Secrets/API keys only ever go in `.env` or the `my-secrets` repo —
       never in `appsettings.json`, source files, or commit messages
-
-### After changing a database model
-
-```bash
-cd src/AI-Ecommerce.Data
-dotnet ef migrations add <DescriptiveName> --startup-project ..\AI-Ecommerce.Cli
-dotnet ef database update --startup-project ..\AI-Ecommerce.Cli
-cd ../..
-git add src/AI-Ecommerce.Data/Migrations
-git commit -m "Add migration: <DescriptiveName>"
-```
 
 ---
 
