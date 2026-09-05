@@ -81,6 +81,9 @@ SET IDENTITY_INSERT [Carts] ON;
 SET IDENTITY_INSERT [Carts] OFF;
 
 SET IDENTITY_INSERT [CategoryMasters] ON;
+INSERT INTO [CategoryMasters] ([CategoryId], [CategoryName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'Electronics', 1, NULL, '2026-08-30 11:56:15.4220000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [CategoryMasters] ([CategoryId], [CategoryName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'Audio', 1, NULL, '2026-08-30 11:56:15.4220000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [CategoryMasters] ([CategoryId], [CategoryName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'Accessories', 1, NULL, '2026-09-02 06:49:57.1900000', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [CategoryMasters] OFF;
 
 SET IDENTITY_INSERT [CreditNoteItems] ON;
@@ -90,6 +93,7 @@ SET IDENTITY_INSERT [CreditNotes] ON;
 SET IDENTITY_INSERT [CreditNotes] OFF;
 
 SET IDENTITY_INSERT [CustomerMasters] ON;
+INSERT INTO [CustomerMasters] ([CustomerId], [UniqueId], [Email], [PasswordHash], [FirstName], [LastName], [PhoneNumber], [AddressLine], [City], [State], [Country], [Pincode], [IsActive], [CreatedAt], [UpdatedAt], [DeletedAt]) VALUES (1, '0b36eb5f-b9b0-4edf-9aba-e37f17cb016d', 'demo@example.com', '297BD4BA3EA22ABDBAE610566A9DA4E3.DE7F3AB72C869EA62BC59BFEA27D191DCDB6B7E3EB3895FFDC79387EE5F35523', 'Demo', 'Customer', '9876543210', '1 Demo Street', 'Pune', 'Maharashtra', 'India', '411001', 1, '2026-09-02 06:49:59.5300000', NULL, NULL);
 SET IDENTITY_INSERT [CustomerMasters] OFF;
 
 SET IDENTITY_INSERT [DebitNoteItems] ON;
@@ -99,9 +103,11 @@ SET IDENTITY_INSERT [DebitNotes] ON;
 SET IDENTITY_INSERT [DebitNotes] OFF;
 
 SET IDENTITY_INSERT [DepartmentMasters] ON;
+INSERT INTO [DepartmentMasters] ([DepartmentId], [DepartmentName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'CEO', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [DepartmentMasters] OFF;
 
 SET IDENTITY_INSERT [EmployeeMasters] ON;
+INSERT INTO [EmployeeMasters] ([EmployeeId], [UniqueId], [Email], [PasswordHash], [FirstName], [LastName], [PhoneNumber], [DepartmentId], [UserTypeId], [IsActive], [CreatedBy], [CreatedAt], [UpdatedAt], [DeletedAt]) VALUES (1, '2143ceff-42b7-43a1-9211-8823b90b3780', 'bhaktiraut857@gmail.com', '6E0E31A5812DF35036543C37ED624FE3.5E3786E22D0A5E8F0255825FA3AAEB755554AAE484763BF7E161E0A7F7FC7970', 'Bhaktiraut', 'Raut', NULL, 1, 1, 1, NULL, '2026-09-02 06:50:01.2966667', NULL, NULL);
 SET IDENTITY_INSERT [EmployeeMasters] OFF;
 
 SET IDENTITY_INSERT [LedgerEntries] ON;
@@ -118,12 +124,21 @@ SET IDENTITY_INSERT [Payments] ON;
 SET IDENTITY_INSERT [Payments] OFF;
 
 SET IDENTITY_INSERT [ProductMasters] ON;
+INSERT INTO [ProductMasters] ([ProductId], [ProductCode], [ProductName], [CategoryId], [SubCategoryId], [UnitId], [PurchasePrice], [SellingPrice], [GSTPercent], [IsActive], [Approval1By], [Approval1At], [Approval2By], [Approval2At], [Approval3By], [Approval3At], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'PRD-001', 'Laptop', 1, NULL, 1, 700.00, 999.99, 18.00, 1, 1, '2026-08-30 11:56:15.5390000', 1, '2026-08-30 11:56:15.5390000', 1, '2026-08-30 11:56:15.5390000', NULL, '2026-08-30 11:56:15.5390000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [ProductMasters] ([ProductId], [ProductCode], [ProductName], [CategoryId], [SubCategoryId], [UnitId], [PurchasePrice], [SellingPrice], [GSTPercent], [IsActive], [Approval1By], [Approval1At], [Approval2By], [Approval2At], [Approval3By], [Approval3At], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'PRD-002', 'Smartphone', 1, NULL, 1, 450.00, 699.99, 18.00, 1, 1, '2026-08-30 11:56:15.5390000', 1, '2026-08-30 11:56:15.5390000', 1, '2026-08-30 11:56:15.5390000', NULL, '2026-08-30 11:56:15.5390000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [ProductMasters] ([ProductId], [ProductCode], [ProductName], [CategoryId], [SubCategoryId], [UnitId], [PurchasePrice], [SellingPrice], [GSTPercent], [IsActive], [Approval1By], [Approval1At], [Approval2By], [Approval2At], [Approval3By], [Approval3At], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'PRD-003', 'Headphones', 2, NULL, 1, 50.00, 89.99, 12.00, 1, 1, '2026-08-31 06:58:33.0000000', 1, '2026-08-31 06:58:33.0000000', 1, '2026-08-31 06:58:33.0000000', NULL, '2026-09-02 06:50:04.1300000', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [ProductMasters] OFF;
 
 SET IDENTITY_INSERT [Products] ON;
+INSERT INTO [Products] ([Id], [SKU], [Name], [Description], [Price], [Cost], [Category], [StockQuantity], [IsActive], [CreatedAt], [UpdatedAt]) VALUES (1, 'P001', 'Laptop', NULL, 999.99, 800.00, 'Electronics', 10, 1, '2026-08-30 11:56:15.7920000', NULL);
+INSERT INTO [Products] ([Id], [SKU], [Name], [Description], [Price], [Cost], [Category], [StockQuantity], [IsActive], [CreatedAt], [UpdatedAt]) VALUES (2, 'P002', 'Smartphone', NULL, 699.99, 500.00, 'Electronics', 15, 1, '2026-08-30 11:56:15.7920000', NULL);
+INSERT INTO [Products] ([Id], [SKU], [Name], [Description], [Price], [Cost], [Category], [StockQuantity], [IsActive], [CreatedAt], [UpdatedAt]) VALUES (3, 'P003', 'Headphones', NULL, 89.99, 60.00, 'Audio', 50, 1, '2026-09-02 06:50:06.9100000', NULL);
 SET IDENTITY_INSERT [Products] OFF;
 
 SET IDENTITY_INSERT [ProductStocks] ON;
+INSERT INTO [ProductStocks] ([ProductStockId], [ProductId], [WarehouseId], [Quantity], [ReservedQuantity], [UpdatedDate]) VALUES (1, 1, 1, 50.000, 0.000, '2026-08-30 11:56:15.7300000');
+INSERT INTO [ProductStocks] ([ProductStockId], [ProductId], [WarehouseId], [Quantity], [ReservedQuantity], [UpdatedDate]) VALUES (2, 2, 1, 50.000, 0.000, '2026-08-30 11:56:15.7430000');
+INSERT INTO [ProductStocks] ([ProductStockId], [ProductId], [WarehouseId], [Quantity], [ReservedQuantity], [UpdatedDate]) VALUES (3, 3, 1, 50.000, 0.000, '2026-09-02 06:50:08.3166667');
 SET IDENTITY_INSERT [ProductStocks] OFF;
 
 SET IDENTITY_INSERT [PurchaseOrderItems] ON;
@@ -163,15 +178,24 @@ SET IDENTITY_INSERT [sysdiagrams] ON;
 SET IDENTITY_INSERT [sysdiagrams] OFF;
 
 SET IDENTITY_INSERT [UnitMasters] ON;
+INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'Piece', 1, NULL, '2026-08-30 11:56:15.2980000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'Kg', 1, NULL, '2026-08-30 11:56:15.2990000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'Litre', 1, NULL, '2026-08-30 11:56:15.2990000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [UnitMasters] ([UnitId], [UnitName], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (4, 'Box', 1, NULL, '2026-09-02 06:50:12.4766667', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [UnitMasters] OFF;
 
 SET IDENTITY_INSERT [UserTypeMasters] ON;
+INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'MasterAdmin', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (2, 'Admin', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (3, 'Senior', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO [UserTypeMasters] ([UserTypeId], [UserTypeName], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (4, 'Junior', NULL, '2026-01-01 00:00:00.0000000', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [UserTypeMasters] OFF;
 
 SET IDENTITY_INSERT [VendorMasters] ON;
 SET IDENTITY_INSERT [VendorMasters] OFF;
 
 SET IDENTITY_INSERT [WarehouseMasters] ON;
+INSERT INTO [WarehouseMasters] ([WarehouseId], [WarehouseName], [Address], [City], [State], [Pincode], [IsActive], [CreatedBy], [CreatedAt], [ModifiedBy], [ModifiedAt], [DeletedBy], [DeletedAt], [LogId]) VALUES (1, 'WH-001', 'Main Warehouse', 'Industrial Area', 'Pune', 'Maharashtra', 1, 1, '2026-09-02 06:50:14.7600000', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [WarehouseMasters] OFF;
 
 IF EXISTS (SELECT 1 FROM sys.identity_columns WHERE object_id=OBJECT_ID('CartItems') AND last_value IS NOT NULL)
