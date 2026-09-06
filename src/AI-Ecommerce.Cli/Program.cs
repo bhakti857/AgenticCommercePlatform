@@ -8,6 +8,7 @@ using System.ClientModel;
 using DotNetEnv;
 using AI_Ecommerce.Data;
 using Microsoft.EntityFrameworkCore;
+using AI_Ecommerce.Cli.OpenCode;
 Env.Load("../../.env");
 
 var services = new ServiceCollection();
@@ -47,49 +48,113 @@ services.AddScoped<IChatClient>(sp =>
         .Build();
 });
 
-var provider = services.BuildServiceProvider();
-var agent = provider.GetRequiredService<AgentHarness>();
+string providerName = (Environment.GetEnvironmentVariable("LLM_PROVIDER") ?? "opencode").ToLowerInvariant();
 
-// 👇 NEW CODE GOES HERE — right after the provider/agent are built,
-//    right before the console UI starts.
-DevTools.ApprovalHandler = async (description) =>
+if (providerName == "opencode")
 {
-    Console.WriteLine();
-    Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.WriteLine($"⚠️  Approval needed: {description}");
-    Console.ResetColor();
-    Console.Write("Proceed? (y/n): ");
-
-    var input = Console.ReadLine();
-    return await Task.FromResult(
-        !string.IsNullOrEmpty(input) &&
-        (input.Trim().ToLower() == "y" || input.Trim().ToLower() == "yes")
-    );
-};
-
-Console.WriteLine("🧠 Agentic Development Assistant");
-Console.WriteLine("Type your commands (type 'exit' to quit)");
-Console.WriteLine();
-
-string? sessionId = Guid.NewGuid().ToString();
-string? userId = "cli-user";
-
-while (true)
+    await RunOpenCodeChatAsync();
+}
+else
 {
-    Console.Write("🤖 > ");
-    var input = Console.ReadLine();
-    if (string.IsNullOrEmpty(input) || input.ToLower() == "exit")
-        break;
-
-    try
-    {
-        var response = await agent.ProcessMessageAsync(userId, input, sessionId, allowWriteTools: true);
-        Console.WriteLine($"\n{response}\n");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error: {ex.Message}");
-    }
+    var provider = services.BuildServiceProvider();
+    var agent = provider.GetRequiredService<AgentHarness>();
+    await RunOpenRouterChatAsync(agent);
 }
 
-Console.WriteLine("Goodbye!");
+static async Task RunOpenCodeChatAsync()
+{
+    var baseUrl = Environment.GetEnvironmentVariable("OPENCODE_URL") ?? "http://127.0.0.1:4096";
+    var password = Environment.GetEnvironmentVariable("OPENCODE_SERVER_PASSWORD");
+    var client = new OpenCodeClient(baseUrl, password);
+
+    if (!await client.IsHealthyAsync())
+    {
+        Console.WriteLine($"⚠️  opencode server not reachable at {baseUrl}.");
+        Console.WriteLine("Start it in another terminal with:");
+        Console.WriteLine("    opencode serve --port 4096");
+        Console.WriteLine("or set LLM_PROVIDER=openrouter to use OpenRouter instead.");
+        return;
+    }
+
+    // Resume the last session so chat history is maintained across restarts.
+    var sessionId = SessionStore.Load();
+    if (!string.IsNullOrEmpty(sessionId))
+        Console.WriteLine($"💬 Resuming conversation (session {sessionId})");
+    else
+    {
+        sessionId = await client.CreateSessionAsync();
+        SessionStore.Save(sessionId);
+        Console.WriteLine($"🔵 New opencode session: {sessionId}");
+    }
+
+    Console.WriteLine($"✅ Connected to opencode server at {baseUrl}");
+    Console.WriteLine("🧠 Agentic Development Assistant (opencode)");
+    Console.WriteLine("Type your commands (type 'exit' to quit)");
+    Console.WriteLine();
+
+    while (true)
+    {
+        Console.Write("🤖 > ");
+        var input = Console.ReadLine();
+        if (string.IsNullOrEmpty(input) || input.ToLower() == "exit")
+            break;
+
+        try
+        {
+            var response = await client.SendMessageAsync(sessionId, input);
+            Console.WriteLine($"\n{response}\n");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    Console.WriteLine("Goodbye!");
+}
+
+static async Task RunOpenRouterChatAsync(AgentHarness agent)
+{
+    // 👇 Approval gating for the interactive OpenRouter harness path.
+    DevTools.ApprovalHandler = async (description) =>
+    {
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"⚠️  Approval needed: {description}");
+        Console.ResetColor();
+        Console.Write("Proceed? (y/n): ");
+
+        var input = Console.ReadLine();
+        return await Task.FromResult(
+            !string.IsNullOrEmpty(input) &&
+            (input.Trim().ToLower() == "y" || input.Trim().ToLower() == "yes")
+        );
+    };
+
+    Console.WriteLine("🧠 Agentic Development Assistant");
+    Console.WriteLine("Type your commands (type 'exit' to quit)");
+    Console.WriteLine();
+
+    var sessionId = Guid.NewGuid().ToString();
+    var userId = "cli-user";
+
+    while (true)
+    {
+        Console.Write("🤖 > ");
+        var input = Console.ReadLine();
+        if (string.IsNullOrEmpty(input) || input.ToLower() == "exit")
+            break;
+
+        try
+        {
+            var response = await agent.ProcessMessageAsync(userId, input, sessionId, allowWriteTools: true);
+            Console.WriteLine($"\n{response}\n");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    Console.WriteLine("Goodbye!");
+}

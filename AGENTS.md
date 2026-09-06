@@ -82,10 +82,36 @@ CONNECTION_STRING=Server=localhost,1433;Database=AgenticCommerceDB;User Id=sa;Pa
 
 ---
 
-## 5. LLM Provider — Groq / OpenRouter, with known flakiness
+## 5. LLM Provider — Groq / OpenRouter / opencode, with known flakiness
 
 The agent uses free-tier hosted LLMs via OpenAI-compatible endpoints. **Both
 providers have real limitations; expect to swap between them.**
+
+### CLI chat provider selection (`LLM_PROVIDER`)
+
+The **CLI** (`src/AI-Ecommerce.Cli`) can talk to either of two backends,
+selected at startup by the `LLM_PROVIDER` env var:
+
+- `opencode` (default) — talks to a running `opencode serve` HTTP server via
+  `OpenCodeClient` (`src/AI-Ecommerce.Cli/OpenCode/`). The opencode server
+  runs the full opencode agent (its own tools + model routing through the
+  `opencode`/Zen provider). It is **not** OpenAI-compatible, so it installs as
+  a separate loop in `Program.RunOpenCodeChatAsync`, bypassing `IChatClient`
+  and `AgentHarness`. History is maintained by the opencode server per session.
+- `openrouter` — the original path through `IChatClient` → `AgentHarness`
+  (SQL persistence via `ConversationHistory`).
+
+For the `opencode` provider:
+- Start the server first in another terminal: `opencode serve --port 4096`
+  (customize with `OPENCODE_URL`, default `http://127.0.0.1:4096`, and
+  protect with `OPENCODE_SERVER_PASSWORD`).
+- **Chat history is maintained across CLI restarts**: the active opencode
+  session id is persisted to `.opencode-session` (next to the CLI output
+  assembly, i.e. `bin/Debug/net8.0/.opencode-session`) and resumed on the
+  next `dotnet run`. Delete that file to start a brand-new conversation.
+- This addresses the "no resume last conversation" gap (section 11) for the
+  CLI **only** — it relies on the opencode server's own session store, not on
+  the SQL `ConversationHistory` table.
 
 ### Groq (`https://api.groq.com/openai/v1`)
 - Model used: `llama-3.3-70b-versatile`
@@ -241,8 +267,9 @@ multiple project/solution files present).
 
 - Web API approval gating is auto-approve-only (see section 6) — no real
   pending-approval UX yet.
-- CLI and API sessions always start a fresh `SessionId` — no "resume last
-  conversation" feature yet.
+- The CLI resumes its opencode conversation via the opencode server (see
+  section 5.1) — but the **API** still starts a fresh `SessionId` on every
+  request, with no "resume last conversation" feature.
 - No automatic Groq → OpenRouter fallback — switching providers currently
   requires manually editing `Program.cs` in both CLI and API projects.
 - Several pre-existing nullable-reference warnings (`CS8604`, `CS8602`) in
