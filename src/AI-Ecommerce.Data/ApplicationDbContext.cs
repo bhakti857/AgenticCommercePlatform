@@ -64,6 +64,9 @@ namespace AI_Ecommerce.Data
         public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
 
+        // --- Auth / security ---
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -112,6 +115,7 @@ namespace AI_Ecommerce.Data
             ConfigureInventoryEntities(modelBuilder);
             ConfigureAccountingEntities(modelBuilder);
             ConfigureCartEntities(modelBuilder);
+            ConfigureAuthEntities(modelBuilder);
         }
 
         private static void ConfigureMasterEntities(ModelBuilder modelBuilder)
@@ -469,6 +473,26 @@ namespace AI_Ecommerce.Data
                     .WithMany()
                     .HasForeignKey(e => e.ProductId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        private static void ConfigureAuthEntities(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasIndex(e => e.TokenHash).IsUnique();
+                entity.HasIndex(e => e.CustomerId);
+                entity.HasIndex(e => e.EmployeeId);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Employee)
+                    .WithMany()
+                    .HasForeignKey(e => e.EmployeeId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

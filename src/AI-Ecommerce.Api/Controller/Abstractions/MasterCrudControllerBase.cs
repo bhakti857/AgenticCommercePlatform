@@ -38,7 +38,7 @@ namespace AI_Ecommerce.Api.Controllers.Abstractions
             { "CreatedAt", "CreatedBy", "ModifiedAt", "ModifiedBy", "UpdatedAt", "DeletedAt", "DeletedBy", "LogId" };
 
         private Type KeyType =>
-            _context.Model.FindEntityType(typeof(TEntity)).FindPrimaryKey().Properties[0].ClrType;
+            _context.Model.FindEntityType(typeof(TEntity))!.FindPrimaryKey()!.Properties[0].ClrType;
 
         private static void SetIfHas(object entity, string name, object? value)
         {
@@ -69,8 +69,8 @@ namespace AI_Ecommerce.Api.Controllers.Abstractions
         /// <summary>Copies scalar (non-navigation, non-key, non-audit) properties from source to target.</summary>
         protected void CopyScalars(TEntity source, TEntity target)
         {
-            var keyNames = _context.Model.FindEntityType(typeof(TEntity))
-                .FindPrimaryKey().Properties.Select(k => k.Name).ToHashSet();
+            var keyNames = _context.Model.FindEntityType(typeof(TEntity))!
+                .FindPrimaryKey()!.Properties.Select(k => k.Name).ToHashSet();
 
             foreach (var prop in typeof(TEntity).GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {

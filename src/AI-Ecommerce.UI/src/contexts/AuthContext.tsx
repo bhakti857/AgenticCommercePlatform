@@ -1,15 +1,6 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { useState } from 'react';
 import api from '../api/client';
-
-interface AuthContextType {
-  token: string | null;
-  user: any | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: any) => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
+import { AuthContext } from './auth-context';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -20,7 +11,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     const res = await api.post('/auth/login', { email, password });
-    const { token, ...userData } = res.data;
+    const { token, refreshToken, ...userData } = res.data;
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setToken(token);
@@ -29,14 +21,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (data: any) => {
     const res = await api.post('/auth/register', data);
-    const { token, ...userData } = res.data;
+    const { token, refreshToken, ...userData } = res.data;
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setToken(token);
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const refresh = localStorage.getItem('refreshToken');
+    if (refresh) {
+      try {
+        await api.post('/auth/revoke', { refreshToken: refresh });
+      } catch {
+        // Best-effort — the token remains invalid once the JWT expires.
+      }
+    }
     localStorage.clear();
     setToken(null);
     setUser(null);
@@ -48,5 +49,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext)!;

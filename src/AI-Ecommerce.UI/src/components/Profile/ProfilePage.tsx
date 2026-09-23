@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 
 interface Profile {
   email: string;

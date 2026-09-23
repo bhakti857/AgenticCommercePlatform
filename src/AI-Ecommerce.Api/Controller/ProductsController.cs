@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using AI_Ecommerce.Data;
 using AI_Ecommerce.Data.Models;
+using AI_Ecommerce.Api.Services;
 
 namespace AI_Ecommerce.Api.Controllers;
 
@@ -17,10 +18,14 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        var products = await _context.Products.ToListAsync();
-        return Ok(products);
+        var result = await PaginationHelper.ToResultAsync(
+            _context.Products.AsNoTracking(),
+            page,
+            pageSize,
+            HttpContext.RequestAborted);
+        return Ok(result);
     }
 
     [HttpGet("{id}")]

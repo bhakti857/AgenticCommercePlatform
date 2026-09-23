@@ -36,7 +36,7 @@ be running at `http://localhost:5015` and its CORS policy must allow
 flowchart LR
     UI["src/App.tsx<br/>BrowserRouter + AuthProvider"]
     API["src/api/client.ts<br/>axios · :5015/api · Bearer token<br/>unwraps $id/$values"]
-    CONTEXT["src/contexts/AuthContext.tsx<br/>auth state + localStorage token"]
+    CONTEXT["src/contexts/<br/>AuthContext.tsx + auth-context.ts + useAuth.ts<br/>auth state + localStorage token"]
 
     UI --> API
     UI --> CONTEXT
@@ -56,11 +56,21 @@ flowchart LR
   `{ "$ref": "n" }`; the interceptor flattens both so components can treat
   `response.data` as plain arrays/objects. Keep this when touching the client.
 
-### Auth (`src/contexts/AuthContext.tsx`)
+### Auth (`src/contexts/`)
 
-- Stores `token` + user info in `localStorage`.
-- Exposes `login`, `register` (customers), `registerEmployee` (requires a
-  MasterAdmin/Admin session), and `logout`.
+Auth is split across three files so each one is Fast Refresh-clean (oxlint's
+`react/only-export-components` warns when a single file exports both components
+and context objects/hooks):
+
+- `AuthContext.tsx` — exports **only** the `AuthProvider` component; stores
+  `token` + user info in `localStorage`.
+- `auth-context.ts` — the `AuthContext` object (`createContext`) and the
+  `AuthContextType` interface.
+- `useAuth.ts` — the `useAuth()` hook; import it from here, never from
+  `AuthContext.tsx`.
+
+The provider exposes `login`, `register` (customers), `registerEmployee`
+(requires a MasterAdmin/Admin session), and `logout`.
 
 ## Routes (`src/App.tsx`)
 
@@ -88,8 +98,14 @@ master endpoint). Add a new master by adding a config entry + list key.
 
 ## Notes
 
-- The agent chat (`src/components/Agent/Chat.tsx`) keeps the API-returned
-  `SessionId` in component state — a conversation survives across turns but is
-  lost on page reload (known gap, see the repo-root `FutureScope.md`).
+- The agent chat (`src/components/Agent/Chat.tsx`) persists the API-returned
+  `SessionId` to `localStorage` (key `agentSessionId`), so a conversation
+  resumes across page reloads; a "Start a new conversation" button clears it.
+  The same screen polls `/api/agent/approvals` every 5 seconds and offers
+  Approve/Deny buttons for pending agent write/exec operations.
+- `auth/login` and `auth/register` return a `refreshToken` that `api/client.ts`
+  uses to silently renew the JWT when a request 401s (single refresh attempt,
+  then the session is cleared) — users are not force-logged-out at the 24h JWT
+  boundary. Audit logins are viewable on the `/audit` page (employees only).
 - Tooling is modern-Vite (rolldown-based). Lint with `npm run lint` (oxlint),
   not an ESLint config.

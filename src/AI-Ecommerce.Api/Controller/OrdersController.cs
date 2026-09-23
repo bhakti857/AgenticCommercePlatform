@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AI_Ecommerce.Data;
 using AI_Ecommerce.Data.Models;
+using AI_Ecommerce.Api.Services;
 using System.Security.Claims;
 
 namespace AI_Ecommerce.Api.Controllers;
@@ -21,10 +22,11 @@ public class OrdersController : ControllerBase
 
     // GET: api/orders
     [HttpGet]
-    public async Task<IActionResult> GetOrders()
+    public async Task<IActionResult> GetOrders([FromQuery] int? page, [FromQuery] int? pageSize)
     {
         var userId = GetUserId();
-        var orders = await _context.Orders
+        if (userId == null) return Unauthorized("Only customer accounts can place/view orders.");
+        var ordersQuery = _context.Orders
             .Include(o => o.OrderItems)
             .Where(o => o.CustomerId == userId)
             .OrderByDescending(o => o.CreatedAt)
@@ -35,7 +37,7 @@ public class OrdersController : ControllerBase
                 TotalAmount = o.TotalAmount,
                 OrderStatus = o.OrderStatus,
                 CreatedAt = o.CreatedAt,
-                Items = o.OrderItems.Select(i => new OrderItemDto
+                Items = (o.OrderItems ?? Enumerable.Empty<OrderItem>()).Select(i => new OrderItemDto
                 {
                     Id = i.Id,
                     ProductName = i.ProductName,
@@ -43,9 +45,10 @@ public class OrdersController : ControllerBase
                     UnitPrice = i.UnitPrice,
                     TotalPrice = i.TotalPrice
                 }).ToList()
-            })
-            .ToListAsync();
-        return Ok(orders);
+            });
+
+        var result = await PaginationHelper.ToResultAsync(ordersQuery, page, pageSize, HttpContext.RequestAborted);
+        return Ok(result);
     }
 
     // GET: api/orders/{id}
@@ -53,6 +56,7 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> GetOrder(Guid id)
     {
         var userId = GetUserId();
+        if (userId == null) return Unauthorized("Only customer accounts can place/view orders.");
         var order = await _context.Orders
             .Include(o => o.OrderItems)
             .Where(o => o.Id == id && o.CustomerId == userId)
@@ -63,7 +67,7 @@ public class OrdersController : ControllerBase
                 TotalAmount = o.TotalAmount,
                 OrderStatus = o.OrderStatus,
                 CreatedAt = o.CreatedAt,
-                Items = o.OrderItems.Select(i => new OrderItemDto
+                Items = (o.OrderItems ?? Enumerable.Empty<OrderItem>()).Select(i => new OrderItemDto
                 {
                     Id = i.Id,
                     ProductName = i.ProductName,
@@ -83,6 +87,7 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
     {
         var userId = GetUserId();
+        if (userId == null) return Unauthorized("Only customer accounts can place/view orders.");
 
         if (request.Items == null || request.Items.Count == 0)
             return BadRequest("Order must contain at least one item.");
@@ -138,7 +143,7 @@ public class OrdersController : ControllerBase
             {
                 Id = Guid.NewGuid(),
                 OrderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8)}",
-                CustomerId = userId,
+                CustomerId = userId.Value,
                 SubTotal = subTotal,
                 TaxAmount = tax,
                 ShippingCost = shipping,
@@ -180,16 +185,17 @@ public class OrdersController : ControllerBase
         }
     }
 
-    // Helper to get current customer ID from JWT (orders belong to customers only)
-    private long GetUserId()
+    // Helper to get current customer ID from JWT (orders belong to customers only).
+    // Returns null when the token is missing/malformed or belongs to an employee,
+    // so callers can respond with 401 instead of unhandled 500s.
+    private long? GetUserId()
     {
-        var accountType = User.FindFirst("AccountType")?.Value;
-        if (accountType != "Customer")
-            throw new UnauthorizedAccessException("Only customer accounts can place/view orders.");
+        if (User.FindFirst("AccountType")?.Value != "Customer")
+            return null;
 
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                        ?? User.FindFirst("sub")?.Value;
-        return long.Parse(userIdClaim!);
+        return long.TryParse(userIdClaim, out var id) ? id : null;
     }
 }
 

@@ -110,10 +110,14 @@ sequenceDiagram
 |---|---|---|---|
 | **CLI** (opencode) | n/a — the opencode server runs its own agent | n/a | managed by opencode server |
 | **CLI** (`LLM_PROVIDER=openrouter`) | always | always (`allowWriteTools: true`) | interactive `y/n` prompt |
-| **API / UI** | always | only JWT `UserTypeId` 1–2 (MasterAdmin/Admin) | **auto-approve** (known gap) |
+| **API / UI** | always | only JWT `UserTypeId` 1–2 (MasterAdmin/Admin) | pending-approval gate (`GET/POST /api/agent/approvals`, 10-min auto-deny) |
 
-> ⚠️ The API auto-approves write/exec tools for privileged callers —
-> there is no interactive approval UI yet. Treat the API as trusted/local-only.
+> The API no longer auto-approves. Each write/exec is parked with a token until
+> resolved via `POST /api/agent/approvals/{token}` (MasterAdmin/Admin); pending
+> items are listed by `GET /api/agent/approvals`, and the `/agent` chat UI shows
+> them in an in-chat panel with Approve/Deny buttons (polls every 5 seconds).
+> Unresolved items auto-deny after 10 minutes. The triggering chat request stays
+> in-flight until the decision lands.
 
 ---
 
@@ -270,6 +274,8 @@ payloads.
 | POST | `/api/auth/register` | public — creates a **customer** |
 | POST | `/api/auth/register-employee` | MasterAdmin/Admin (`UserTypeId` 1–2) only |
 | POST | `/api/auth/login` | public — Customer or Employee |
+| POST | `/api/auth/refresh` | public — exchanges a valid refresh token for a fresh JWT (rotates it) |
+| POST | `/api/auth/revoke` | authenticated — revokes a refresh token at logout |
 | GET | `/api/catalog` | any authenticated user — approved + in-stock products |
 | GET/POST | `/api/cart`, `/api/cart/items`, PUT/DELETE `/api/cart/items/{id}`, DELETE `/api/cart` | **customer** |
 | POST | `/api/cart/checkout` | customer — cart → SalesOrder + Payment + stock deduction |
@@ -281,8 +287,16 @@ payloads.
 | CRUD | `/api/customer-master` | read: authenticated; write: employee |
 | CRUD | `/api/employee-master` | MasterAdmin/Admin (privilege rules enforced) |
 | POST | `/api/agent/chat` | **employee only**; write tools for `UserTypeId` 1–2 |
+| GET | `/api/agent/approvals` | employee — list pending agent write/exec approvals |
+| POST | `/api/agent/approvals/{token}` | MasterAdmin/Admin — approve/deny a pending operation |
+| GET | `/api/audit/employee-logs` / `/api/audit/customer-logs` | employee — recent login audit |
 | GET/POST/PUT/DELETE | `/api/products`, `/api/orders` | **legacy** flow, still works |
 | — | `/swagger` | development only |
+
+> List endpoints (`/api/products`, `/api/orders`, `/api/catalog`,
+> `/api/sales-orders`, `/api/audit/*-logs`) support **optional** pagination via
+> `?page=1&pageSize=50` — you get `{ items, page, pageSize, total, totalPages }`;
+> omit the params and you get a plain array (backward compatible).
 
 ---
 
@@ -329,9 +343,10 @@ dotnet test  AI-Ecommerce-Platform.slnx
 - `.env` is git-ignored and never committed — secrets live in the separate
   `my-secrets` repo and are copied in locally. `.env.example` lists every key.
 - Agent `WriteFile`/`ExecuteCommand` are role-gated on the API (`UserTypeId`
-  1–2) but **still auto-approved** for those roles. Keep the API on
-  trusted/local networks until a real pending-approval workflow exists
-  (`FutureScope.md` → Security).
+  1–2) **and** gated by the pending-approval workflow: each operation is parked
+  with a token until resolved via `POST /api/agent/approvals/{token}`
+  (`MasterAdminOrAdmin` policy), with a 10-minute auto-deny (see
+  `FutureScope.md` → Security).
 - Customers are **rejected outright** from `/api/agent/chat`.
 - Password hashing: PBKDF2 via `PasswordHasher`. Never returned by API DTOs.
 - JWT secret must be `32+` chars; rotate it if it ever leaks.
@@ -340,13 +355,14 @@ dotnet test  AI-Ecommerce-Platform.slnx
 
 ## 10. Known gaps & roadmap
 
-- API agent write/exec tools are auto-approved (no pending-approval UX).
-- No persisted conversation **resume across browser reloads** (the UI keeps
-  the `SessionId` in memory only; the API accepts a client-supplied
-  `SessionId`).
-- No automatic Groq → OpenRouter fallback (edit `Program.cs` to switch).
-- `System.IdentityModel.Tokens.Jwt` 7.0.3 has a known vulnerability (NU1902).
-- A few nullable-reference warnings in `AI-Ecommerce.Api`.
+- Agent write/exec approvals have an **in-chat panel** (`/agent`): pending
+  operations poll every 5 seconds with Approve/Deny buttons.
+- Conversation **resume across browser reloads** works: the UI persists the
+  `SessionId` to `localStorage` and offers a "Start a new conversation" reset.
+- Groq → OpenRouter **automatic fallback** is built in (`FallbackChatClient`
+  on HTTP 429/404) when `OPENROUTER_API_KEY` is set.
+- JWT sessions self-renew via **refresh tokens** (issued at login/register,
+  rotated at `POST /api/auth/refresh`, revoked at logout).
 - Test project has no real coverage yet.
 
 See **`FutureScope.md`** for the full prioritized backlog and

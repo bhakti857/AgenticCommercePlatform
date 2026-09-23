@@ -33,8 +33,11 @@ conversation history (`ConversationHistory`).
 | OpenAI (SDK) | 2.12.0 | Must be ≥2.12.0 to satisfy `Microsoft.Extensions.AI.OpenAI 10.8.0`'s transitive requirement |
 | Microsoft.EntityFrameworkCore.* | 9.0.0 | **All EF Core packages across ALL projects are now aligned on 9.0.0** — this was the source of the historical `MissingMethodException` on `TypeMappingInfo` (no compile error, only fails at first DB access). Keep it this way |
 | Microsoft.EntityFrameworkCore.Design | 9.0.0 | Must be on the **startup project** (`AI-Ecommerce.Cli` or `.Api`) for `dotnet ef` commands to work at all |
+| System.IdentityModel.Tokens.Jwt | 8.23.0 | Upgraded from 7.0.3 to clear `NU1902` (GHSA-59j7-ghrg-fj52 / CVE-2024-21319). Never drop below 7.1.2 |
+| Microsoft.AspNetCore.Authentication.JwtBearer | 8.0.0 | Ships with ASP.NET Core 8; unified against the IdentityModel 8.x line via the direct `System.IdentityModel.Tokens.Jwt` reference |
 
-**Rule: when touching any `Microsoft.Extensions.AI*` or `Microsoft.EntityFrameworkCore*`
+**Rule: when touching any `Microsoft.Extensions.AI*`, `Microsoft.EntityFrameworkCore*`,
+or `Microsoft.IdentityModel*`/`System.IdentityModel.Tokens.Jwt`
 package in one `.csproj`, check all other `.csproj` files in the solution for the
 same package and align versions.** This bit us multiple times — NuGet's `NU1605`
 "package downgrade" error is your friend here; don't suppress it, fix the actual
@@ -138,6 +141,12 @@ For the `opencode` provider:
   development/testing — expect `HTTP 429 rate_limit_exceeded`.
 - `llama-3.1-8b-instant` has an even *lower* TPM cap than models like `70b` —
   don't switch to it thinking it'll help with rate limits, it's worse for that.
+- The Web API now falls back to OpenRouter automatically: if `OPENROUTER_API_KEY`
+  is set, `FallbackChatClient` (`AI-Ecommerce.Api/Services/FallbackChatClient.cs`)
+  wraps the Groq client and retries the request on OpenRouter whenever Groq
+  returns HTTP 429 (rate-limit) or HTTP 404 (model unavailable). The outer
+  `ChatClientBuilder.UseFunctionInvocation()` middleware sits *outside* the
+  fallback, so tool calling keeps working identically on either provider.
 
 ### OpenRouter (`https://openrouter.ai/api/v1`) — CLI `openrouter` path
 - Free-tier model availability **rotates without notice** — a specific model ID
@@ -180,15 +189,21 @@ public static Func<string, Task<bool>>? ApprovalHandler { get; set; }
   an interactive `Console.ReadLine()` y/n prompt. This blocks correctly in a
   single-user terminal context. (The default `opencode` path doesn't use
   `DevTools` at all — the opencode server manages its own approvals.)
-- **Web API**: `Program.cs` sets `ApprovalHandler` to **auto-approve
-  everything** (`return true`), because a console y/n prompt can't work
-  across concurrent HTTP requests. **This is a known gap, not a finished
-  feature** — the API will execute `WriteFile`/`ExecuteCommand` unattended.
-  Mitigation in place: tools are only *registered* for callers whose JWT
-  `UserTypeId` claim is MasterAdmin (`1`) or Admin (`2`), and the whole
-  `/api/agent/chat` endpoint rejects customers. Do not expose this API beyond
-  trusted/local use until a real pending-approval workflow (e.g. return a
-  confirmation token, require a follow-up call to execute) is built.
+- **Web API**: `Program.cs` sets `ApprovalHandler` to register the operation in
+  an in-memory `ApprovalGate` (singleton) and await an explicit decision —
+  the API does **not** auto-approve:
+  - `GET /api/agent/approvals` — list pending operations (employees only).
+  - `POST /api/agent/approvals/{token}` — `{ "Approved": true|false }`;
+    restricted by the `MasterAdminOrAdmin` policy (`UserTypeId` 1 or 2).
+  - Unresolved approvals **auto-deny after 10 minutes**, so a conversation
+    cannot hang forever; the tool then reports "cancelled" back to the model.
+  - The chat request that triggered the write stays in-flight until the decision
+    lands. The React UI now has an in-chat approval panel (`Chat.tsx`) that polls
+    `GET /api/agent/approvals` every 5 seconds and offers Approve/Deny buttons
+    (calls `POST /api/agent/approvals/{token}`); the token body field is
+    `{ "approved": true|false }` (camelCase binding is accepted).
+  - Write tools are still only *registered* for JWT `UserTypeId` 1/2, and
+    `/api/agent/chat` rejects customers — layers on top of the gate.
 
 ---
 
@@ -203,9 +218,19 @@ public static Func<string, Task<bool>>? ApprovalHandler { get; set; }
   context size manageable.
 - The API's `AgentController.Chat` now accepts a `SessionId` from the client
   and returns it in the response, so a browser can continue a conversation
-  across turns. The React UI keeps it in component state (lost on reload) —
-  see Known Gaps. The CLI `openrouter` path and the `opencode` path both
-  resume across restarts (SQL history / `.opencode-session` respectively).
+  across turns. The React UI (`Chat.tsx`) persists the `SessionId` to
+  `localStorage` (`agentSessionId`), so reloading the browser resumes the same
+  conversation; a "Start a new conversation" button clears it. The CLI
+  `openrouter` path and the `opencode` path both resume across restarts
+  (SQL history / `.opencode-session` respectively).
+- **Refresh tokens**: `POST /api/auth/login` and `POST /api/auth/register` now
+  also return a long-lived `RefreshToken` (opaque, 64 random bytes, stored only
+  as a SHA-256 hash in the new `RefreshTokens` table). `POST /api/auth/refresh`
+  exchanges a still-valid refresh token for a fresh JWT and rotates it (old row
+  revoked, new one issued), and `POST /api/auth/revoke` invalidates it at logout.
+  The UI's `api/client.ts` silently refreshes a 401'd request once before giving
+  up, so users don't get logged out mid-session at the 24h JWT boundary. Any new
+  consumer must persist the refresh token and reuse it via `/auth/refresh`.
 - **Migrations require a design-time factory** because `Program.cs` uses
   top-level statements with a manually-built `ServiceProvider`, which the EF
   Core CLI tools can't introspect. See `ApplicationDbContextFactory.cs`
@@ -311,28 +336,22 @@ dotnet build AI-Ecommerce-Platform.slnx
 Running bare `dotnet build` from the root fails with `MSB1011` (ambiguous —
 multiple project/solution files present).
 
-There is also an **orphaned `src/components/` folder at the repo root** —
-stale duplicates of UI components, not referenced by any project. Leave it
-alone unless you're deleting it as a cleanup task (tracked in `FutureScope.md`).
+A stale duplicate `src/components/` folder at the repo root (unreferenced by any
+project) was removed as cleanup — do not recreate it; the real UI components
+live under `AI-Ecommerce.UI/src/components/`.
 
 ---
 
 ## 11. Known Gaps / Not Yet Built
 
-- Web API approval gating is auto-approve-only (see section 6) — no real
-  pending-approval UX yet.
-- Conversation resume: the **CLI** resumes (opencode server / persisted
-  session file) and the **API** accepts a client-supplied `SessionId`, but the
-  **React UI keeps it in memory only** — reloading the browser starts the
-  conversation context fresh. There is no persisted "resume last conversation"
-  feature for the web UI.
-- No automatic Groq → OpenRouter fallback — switching providers currently
-  requires manually editing `Program.cs` in both CLI and API projects.
-- `System.IdentityModel.Tokens.Jwt` 7.0.3 has a known moderate vulnerability
-  (`NU1902`, GHSA-59j7-ghrg-fj52) — upgrade pending (see `FutureScope.md`).
-- Several pre-existing nullable-reference warnings (`CS8604`, `CS8602`) in
-  `AI-Ecommerce.Api` (`JwtService.cs`, `OrdersController.cs`) — harmless,
-  not yet cleaned up.
+- Conversation history rows older than 90 days are deleted daily by
+  `ConversationHistoryCleanupService` (a hosted `BackgroundService` in the
+  API) — bounded growth per configurable window, one `ExecuteDeleteAsync` a day.
+- Pagination on list endpoints (`/api/products`, `/api/orders`, `/api/catalog`,
+  `/api/sales-orders`, `/api/audit/*-logs`) is **backward-compatible optional**:
+  pass `?page=1&pageSize=50` and get `{ items, page, pageSize, total, totalPages }`;
+  omit them and you still get the plain array. Don't change existing UI calls
+  that don't page.
 - `ProductMaster` 3-step approval (`Approval1At/2At/3At`) exists in schema and
   the dashboard lists pending approvals, but there is no approve/deny action in
   the API or UI yet.

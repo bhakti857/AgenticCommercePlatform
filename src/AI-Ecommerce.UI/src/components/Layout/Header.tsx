@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 
 const navLinks = [
   { to: '/', label: 'Home', roles: ['Customer', 'Employee'] },
@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/dashboard', label: 'Dashboard', roles: ['Employee'] },
   { to: '/masters', label: 'Masters', roles: ['Employee'] },
   { to: '/agent', label: 'Agent', roles: ['Employee'] },
+  { to: '/audit', label: 'Audit', roles: ['Employee'] },
   { to: '/profile', label: 'Profile', roles: ['Customer', 'Employee'] },
 ];
 

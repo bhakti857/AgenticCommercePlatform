@@ -242,8 +242,9 @@ Then, in the browser:
    orders, and edit their profile.
 3. **Employees** also get the Dashboard and Master Data CRUD pages.
 4. `/agent` chat is **employees only** — customers receive `403`. The agent's
-   write/execute tools are available only to MasterAdmin/Admin (the API
-   auto-approves them). Create staff accounts via `/employeeregister`
+   write/execute tools are available only to MasterAdmin/Admin, and each one
+   waits for approval via `POST /api/agent/approvals/{token}` (pending items:
+   `GET /api/agent/approvals`). Create staff accounts via `/employeeregister`
    (requires a MasterAdmin/Admin login) or
    `POST /api/auth/register-employee`.
 5. The API uses `GROQ_API_KEY` + `GROQ_MODEL` (falls back to a mock client if

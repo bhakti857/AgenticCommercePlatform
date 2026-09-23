@@ -1,5 +1,6 @@
 using AI_Ecommerce.Data;
 using AI_Ecommerce.Data.Models.Transactions;
+using AI_Ecommerce.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -69,28 +70,46 @@ namespace AI_Ecommerce.Api.Controllers
 
         // Customer: my orders (tracking)
         [HttpGet]
-        public async Task<IActionResult> GetMyOrders()
+        public async Task<IActionResult> GetMyOrders([FromQuery] int? page, [FromQuery] int? pageSize)
         {
             if (!IsCustomer()) return Forbid();
             var id = CurrentId;
-            var orders = await _context.SalesOrders
+            IQueryable<SalesOrder> query = _context.SalesOrders
                 .Include(o => o.Items)
                 .Where(o => o.CustomerId == id)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-            return Ok(orders.Select(ToDto));
+                .OrderByDescending(o => o.CreatedAt);
+
+            var result = await PaginationHelper.ToResultAsync(query, page, pageSize, HttpContext.RequestAborted);
+            return Ok(ToPagedOrList(result));
         }
 
         // Employee: all orders
         [HttpGet("all")]
-        public async Task<IActionResult> GetAllOrders()
+        public async Task<IActionResult> GetAllOrders([FromQuery] int? page, [FromQuery] int? pageSize)
         {
             if (!IsEmployee()) return Forbid();
-            var orders = await _context.SalesOrders
+            IQueryable<SalesOrder> query = _context.SalesOrders
                 .Include(o => o.Items)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-            return Ok(orders.Select(ToDto));
+                .OrderByDescending(o => o.CreatedAt);
+
+            var result = await PaginationHelper.ToResultAsync(query, page, pageSize, HttpContext.RequestAborted);
+            return Ok(ToPagedOrList(result));
+        }
+
+        private static object ToPagedOrList(object result)
+        {
+            if (result is List<SalesOrder> list)
+                return list.Select(ToDto);
+
+            var paged = (PagedResult<SalesOrder>)result;
+            return new
+            {
+                items = paged.Items.Select(ToDto),
+                paged.Page,
+                paged.PageSize,
+                paged.Total,
+                paged.TotalPages
+            };
         }
 
         [HttpGet("{id:long}")]

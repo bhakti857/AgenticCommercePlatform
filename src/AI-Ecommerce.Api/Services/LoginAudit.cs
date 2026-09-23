@@ -71,7 +71,7 @@ namespace AI_Ecommerce.Api.Services
     /// <summary>Minimal User-Agent parser — extracts browser and OS family/version.</summary>
     public static class UserAgentInfo
     {
-        public static (string CompName, string OSFamily, string OSVersion, string BrowserFamily, string BrowserVersion) Parse(string userAgent)
+        public static (string CompName, string OSFamily, string? OSVersion, string BrowserFamily, string BrowserVersion) Parse(string userAgent)
         {
             var ua = userAgent ?? string.Empty;
             var compName = "Unknown";
@@ -99,7 +99,7 @@ namespace AI_Ecommerce.Api.Services
             {
                 osFamily = ua.Contains("iPad", StringComparison.OrdinalIgnoreCase) ? "iPadOS" : "iOS";
                 osVersion = MatchVersion(ua, @"OS ([\d_]+)");
-                osVersion = osVersion.Replace('_', '.');
+                osVersion = osVersion?.Replace('_', '.') ?? "";
             }
             else if (ua.Contains("Mac OS X", StringComparison.OrdinalIgnoreCase) || ua.Contains("Macintosh", StringComparison.OrdinalIgnoreCase))
             {

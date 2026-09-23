@@ -44,6 +44,10 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// 1b. Global exception handling — RFC 7807 ProblemDetails instead of raw 500s
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 // 2. Register DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -64,12 +68,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]))
+                Encoding.UTF8.GetBytes(jwtSecret))
         };
     });
 
-// 5. Add Authorization
-builder.Services.AddAuthorization();
+// 5. Add Authorization — user-type policies so controllers can use
+// [Authorize(Policy = ...)] instead of re-parsing claims ad hoc.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireEmployee", policy => policy.RequireClaim("AccountType", "Employee"));
+    options.AddPolicy("MasterAdminOnly", policy => policy.RequireClaim("UserTypeId", "1"));
+    options.AddPolicy("MasterAdminOrAdmin", policy => policy.RequireClaim("UserTypeId", "1", "2"));
+});
 
 // 5b. Add CORS
 builder.Services.AddCors(options =>
@@ -86,6 +96,10 @@ builder.Services.AddCors(options =>
 
 // 6. Register Agent Services
 builder.Services.AddScoped<AgentHarness>();
+
+// 6a. Agent approval gate — in-memory store of pending WriteFile/ExecuteCommand
+// operations awaiting an explicit Approve/Deny decision (see ApprovalGate.cs).
+builder.Services.AddSingleton<ApprovalGate>();
 
 // 6b. Rate limiting — protect the login endpoint from brute-force attempts
 // (partitioned per client IP) and the agent chat endpoint from being spammed
@@ -126,43 +140,75 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
+// Chat client: Groq primary with OpenRouter auto-fallback on 429/404.
 builder.Services.AddScoped<IChatClient>(sp =>
 {
     var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
+    var openRouterKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
 
-    if (string.IsNullOrEmpty(groqKey))
+    IChatClient? groq = null;
+    if (!string.IsNullOrEmpty(groqKey))
     {
-        Console.WriteLine("⚠️  GROQ_API_KEY not set – using mock client.");
+        var groqModel = Environment.GetEnvironmentVariable("GROQ_MODEL") ?? "openai/gpt-oss-20b";
+        groq = new OpenAIClient(
+                new ApiKeyCredential(groqKey),
+                new OpenAIClientOptions { Endpoint = new Uri("https://api.groq.com/openai/v1") })
+            .GetChatClient(groqModel)
+            .AsIChatClient();
+        Console.WriteLine($"✅ Using Groq ({groqModel})");
+    }
+
+    IChatClient? openRouter = null;
+    if (!string.IsNullOrEmpty(openRouterKey))
+    {
+        // openrouter/free auto-routes to whatever free model is currently online,
+        // so this fallback doesn't rot when a specific free model is delisted.
+        openRouter = new OpenAIClient(
+                new ApiKeyCredential(openRouterKey),
+                new OpenAIClientOptions { Endpoint = new Uri("https://openrouter.ai/api/v1") })
+            .GetChatClient("openrouter/free")
+            .AsIChatClient();
+        Console.WriteLine("✅ Using OpenRouter (openrouter/free) as fallback");
+    }
+
+    if (groq == null && openRouter == null)
+    {
+        Console.WriteLine("⚠️  GROQ/OPENROUTER key not set – using mock client.");
         return new MockChatClient();
     }
 
-    Console.WriteLine("✅ Using Groq (Llama 3.3 70B)");
-    var credential = new ApiKeyCredential(groqKey);
-    var options = new OpenAIClientOptions
-    {
-        Endpoint = new Uri("https://api.groq.com/openai/v1")
-    };
-    var groqModel = Environment.GetEnvironmentVariable("GROQ_MODEL") ?? "openai/gpt-oss-20b";
-    var client = new OpenAIClient(credential, options);
-    IChatClient chatClient = client
-        .GetChatClient(groqModel)
-        .AsIChatClient();
+    IChatClient effective = groq != null && openRouter != null
+        ? new FallbackChatClient(groq, openRouter, sp.GetRequiredService<ILogger<FallbackChatClient>>())
+        : groq ?? openRouter ?? new MockChatClient();
 
-    return new ChatClientBuilder(chatClient)
+    return new ChatClientBuilder(effective)
         .UseFunctionInvocation()
         .Build();
 });
 
+// G5: bounded ConversationHistory – purge rows older than 90 days daily.
+builder.Services.AddHostedService<ConversationHistoryCleanupService>();
+
 var app = builder.Build();
 
-// ⚠️ TEMPORARY: auto-approve all writes/commands from the web API.
-// The console-based y/n approval flow doesn't translate to concurrent HTTP requests.
-// TODO: replace with a proper "pending approval" workflow (e.g., return a
-// confirmation token to the frontend, require a follow-up call to execute).
+// Agent write/execute tools no longer auto-approve. Each WriteFile/ExecuteCommand
+// parks until an operator resolves it via POST /api/agent/approvals/{token} —
+// pending items are listed by GET /api/agent/approvals. Unresolved approvals
+// auto-deny after 10 minutes so a conversation can't hang forever.
+var approvalGate = app.Services.GetRequiredService<ApprovalGate>();
 DevTools.ApprovalHandler = async (description) =>
 {
-    Console.WriteLine($"⚠️  Auto-approved (web API, no interactive gate): {description}");
-    return await Task.FromResult(true);
+    var token = approvalGate.Submit(description);
+    Console.WriteLine($"⏳ Approval required ({token}): {description}");
+    try
+    {
+        return await approvalGate.WaitForDecisionAsync(token).WaitAsync(TimeSpan.FromMinutes(10));
+    }
+    catch (TimeoutException)
+    {
+        Console.WriteLine($"⏳ Approval {token} timed out — denied.");
+        return false;
+    }
 };
 
 // 7. Configure Middleware Pipeline
@@ -171,6 +217,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/useAuth';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import Login from './components/Auth/Login';
@@ -13,6 +14,7 @@ import ProfilePage from './components/Profile/ProfilePage';
 import DashboardPage from './components/Dashboard/DashboardPage';
 import MasterPage from './components/Masters/MasterPage';
 import Chat from './components/Agent/Chat';
+import AuditLogsPage from './components/Dashboard/AuditLogsPage';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { token } = useAuth();
@@ -167,6 +169,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Chat />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/audit"
+                element={
+                  <PrivateRoute>
+                    <AuditLogsPage />
                   </PrivateRoute>
                 }
               />

@@ -128,7 +128,7 @@ namespace AI_Ecommerce.Agent.Harness
         - **Package Versions**:
           - Microsoft.EntityFrameworkCore: 9.0.0
           - Microsoft.AspNetCore.Authentication.JwtBearer: 8.0.0
-          - System.IdentityModel.Tokens.Jwt: 7.0.3
+          - System.IdentityModel.Tokens.Jwt: 8.23.0
           - OpenAI: 2.12.0
           - Microsoft.Extensions.AI: 10.9.0
 

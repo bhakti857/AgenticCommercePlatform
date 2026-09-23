@@ -17,12 +17,12 @@ Status legend: **Open** = not started · **Partial** = some capability exists ·
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 1 | Build a real pending-approval workflow for agent WriteFile/ExecuteCommand (currently auto-approved in the API) | High | Open |
-| 2 | Rotate JWT secret that was previously committed to git history | High | Open |
-| 3 | Replace hardcoded SQL `SA_PASSWORD` in `docker-compose.yml` with a `.env` variable | Medium | Open |
-| 4 | Add `UserTypeId`-based authorization attributes/policies (currently checked ad hoc in controllers) | Medium | Open |
-| 5 | Input validation on `AuthController.Register` — email format, password strength rules | Medium | Open |
-| 6 | Fix `GetUserId()` in `OrdersController` — handle missing/malformed JWT claims with 401 instead of 500 | Medium | Open |
+| 1 | Build a real pending-approval workflow for agent WriteFile/ExecuteCommand (replace API auto-approve) | High | Done |
+| 2 | Rotate JWT secret that was previously committed to git history | High | Done |
+| 3 | Replace hardcoded SQL `SA_PASSWORD` in `docker-compose.yml` with a `.env` variable | Medium | Done |
+| 4 | Add `UserTypeId`-based authorization attributes/policies (currently checked ad hoc in controllers) | Medium | Done |
+| 5 | Input validation on `AuthController.Register` — email format, password strength rules | Medium | Done |
+| 6 | Fix `GetUserId()` in `OrdersController` — handle missing/malformed JWT claims with 401 instead of 500 | Medium | Done |
 
 ---
 
@@ -30,11 +30,11 @@ Status legend: **Open** = not started · **Partial** = some capability exists ·
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 1 | Upgrade `System.IdentityModel.Tokens.Jwt` from 7.0.3 (known vulnerability NU1902) | High | Open |
-| 2 | Fix nullable-reference warnings (`CS8604`, `CS8602`) in `JwtService.cs`, `OrdersController.cs` | Low | Open |
-| 3 | Add global exception-handling middleware — return `ProblemDetails` JSON instead of raw 500 | Medium | Open |
-| 4 | Fix React Fast Refresh lint warning in `AuthContext.tsx` (exports both `AuthProvider` and `useAuth`) | Low | Open |
-| 5 | Remove the orphaned `src/components/` folder at the solution root (stale duplicates of UI components, not part of any project) | Low | Open |
+| 1 | Upgrade `System.IdentityModel.Tokens.Jwt` from 7.0.3 (known vulnerability NU1902) | High | Done |
+| 2 | Fix nullable-reference warnings (`CS8604`, `CS8602`) in `JwtService.cs`, `OrdersController.cs` | Low | Done |
+| 3 | Add global exception-handling middleware — return `ProblemDetails` JSON instead of raw 500 | Medium | Done |
+| 4 | Fix React Fast Refresh lint warning in `AuthContext.tsx` (exports both `AuthProvider` and `useAuth`) | Low | Done |
+| 5 | Remove the orphaned `src/components/` folder at the solution root (stale duplicates of UI components, not part of any project) | Low | Done |
 | 6 | Add an approve/reject action for the `ProductMaster` 3-step approval workflow (schema + "pending approvals" dashboard list exist; no UI to advance/deny) | Medium | Open |
 
 ---
@@ -43,12 +43,13 @@ Status legend: **Open** = not started · **Partial** = some capability exists ·
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 1 | Conversation resume — persist `SessionId` across browser reloads (CLI resumes via `opencode`; API accepts a client `SessionId`, UI holds it in memory only) | Medium | Partial |
-| 2 | Groq ↔ OpenRouter automatic fallback on 429/404 | Medium | Open |
-| 3 | Refresh-token flow — silent JWT renewal before 24h expiry | Medium | Open |
-| 4 | Pagination on `ProductsController.GetAll`, `OrdersController.GetOrders`, `CatalogController`, and `SalesOrdersController` | Medium | Open |
-| 5 | `ConversationHistory` cleanup/retention job (grows unbounded) | Low | Open |
-| 6 | Admin UI for login-audit data (login audit is now written to `EmployeeLogTable`/`CustomerLogTable`; no screen surfaces it yet) | Medium | Open |
+| 1 | Conversation resume — persist `SessionId` across browser reloads (done: UI holds it in `localStorage` + new-conversation reset) | Medium | Done |
+| 2 | Groq ↔ OpenRouter automatic fallback on 429/404 | Medium | Done |
+| 3 | Refresh-token flow — silent JWT renewal before 24h expiry | Medium | Done |
+| 4 | Pagination on `ProductsController.GetAll`, `OrdersController.GetOrders`, `CatalogController`, and `SalesOrdersController` | Medium | Done |
+| 5 | `ConversationHistory` cleanup/retention job (grows unbounded) | Low | Done |
+| 6 | Admin UI for login-audit data (login audit is now written to `EmployeeLogTable`/`CustomerLogTable`; no screen surfaces it yet) | Medium | Done |
+| 7 | Agent approval UI panel — list/approve/deny pending agent write/exec requests in the chat screen (workflow exists at API level; currently resolve via `GET/POST /api/agent/approvals`) | Medium | Done |
 
 ---
 
@@ -121,12 +122,11 @@ Status legend: **Open** = not started · **Partial** = some capability exists ·
 
 ## Recommended next actions (pick any)
 
-1. **Agent pending-approval workflow** — the largest security gap (API
-   currently auto-approves).
+1. **Agent approval UI panel** — the API gate ships, but there's no
+   in-chat surface to list/approve/deny pending agent operations yet.
 2. **Product approval actions UI** — completes the merchandising loop and
    unclogs the dashboard's pending-approvals list.
 3. **Test coverage** — at minimum auth + agent-permission tests; the test
    project is an empty stub.
-4. **Upgrade JWT dependency** — known vulnerability (NU1902).
-5. **Conversation resume across reloads** — small frontend change
+4. **Conversation resume across reloads** — small frontend change
    (persist `SessionId` to `sessionStorage`/`localStorage`).

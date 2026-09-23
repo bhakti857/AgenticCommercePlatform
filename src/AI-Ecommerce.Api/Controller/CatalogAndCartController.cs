@@ -2,6 +2,7 @@ using AI_Ecommerce.Data;
 using AI_Ecommerce.Data.Models.Cart;
 using AI_Ecommerce.Data.Models.Inventory;
 using AI_Ecommerce.Data.Models.Transactions;
+using AI_Ecommerce.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,9 +25,9 @@ namespace AI_Ecommerce.Api.Controllers
         /// This is the new-flow storefront source, replacing the legacy Products table.
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] int? page, [FromQuery] int? pageSize)
         {
-            var products = await _context.ProductMasters
+            var productsQuery = _context.ProductMasters
                 .Where(p => p.IsActive && p.Approval3At != null)
                 .Select(p => new
                 {
@@ -42,8 +43,10 @@ namespace AI_Ecommerce.Api.Controllers
                         .Where(s => s.ProductId == p.ProductId)
                         .Sum(s => s.Quantity - s.ReservedQuantity)
                 })
-                .ToListAsync();
-            return Ok(products);
+                .OrderBy(p => p.ProductName);
+
+            var result = await PaginationHelper.ToResultAsync(productsQuery, page, pageSize, HttpContext.RequestAborted);
+            return Ok(result);
         }
     }
 
@@ -131,7 +134,7 @@ namespace AI_Ecommerce.Api.Controllers
             var cart = await GetOrCreateCartAsync(customerId);
             var existing = cart.Items!.FirstOrDefault(i => i.ProductId == request.ProductId);
             if (existing != null) existing.Quantity += request.Quantity;
-            else cart.Items.Add(new CartItem { CartId = cart.CartId, ProductId = request.ProductId, Quantity = request.Quantity });
+            else cart.Items!.Add(new CartItem { CartId = cart.CartId, ProductId = request.ProductId, Quantity = request.Quantity });
 
             cart.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();

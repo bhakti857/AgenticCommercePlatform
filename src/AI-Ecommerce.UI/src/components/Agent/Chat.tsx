@@ -6,16 +6,55 @@ interface ChatMessage {
   content: string;
 }
 
+interface PendingApproval {
+  token: string;
+  description: string;
+  createdAt: string;
+}
+
+const SESSION_KEY = 'agentSessionId';
+
 export default function Chat() {
   const [message, setMessage] = useState('');
   const [history, setHistory] = useState<ChatMessage[]>([]);
-  const [sessionId, setSessionId] = useState('');
+  const [sessionId, setSessionId] = useState(() => localStorage.getItem(SESSION_KEY) || '');
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState<PendingApproval[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const loadPending = async () => {
+    try {
+      const res = await api.get('/agent/approvals');
+      setPending(res.data.pending ?? []);
+    } catch {
+      setPending([]);
+    }
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [history, loading]);
+
+  useEffect(() => {
+    loadPending();
+    const t = window.setInterval(loadPending, 5000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const resetConversation = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setSessionId('');
+    setHistory([]);
+  };
+
+  const decide = async (token: string, approved: boolean) => {
+    try {
+      await api.post(`/agent/approvals/${token}`, { approved });
+    } catch {
+      // ignore — the poll below will refresh the list
+    }
+    loadPending();
+  };
 
   const sendMessage = async () => {
     const text = message.trim();
@@ -26,12 +65,16 @@ export default function Chat() {
     setLoading(true);
     try {
       const res = await api.post('/agent/chat', { message: text, sessionId });
-      setSessionId(res.data.sessionId);
+      if (res.data.sessionId) {
+        setSessionId(res.data.sessionId);
+        localStorage.setItem(SESSION_KEY, res.data.sessionId);
+      }
       setHistory(h => [...h, { role: 'assistant', content: res.data.response }]);
     } catch {
       setHistory(h => [...h, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }]);
     } finally {
       setLoading(false);
+      loadPending();
     }
   };
 
@@ -44,8 +87,23 @@ export default function Chat() {
 
   return (
     <div className="mx-auto flex h-[70vh] max-w-2xl flex-col">
-      <h1 className="text-2xl font-bold text-primary">AI Agent</h1>
-      <p className="mt-1 text-sm text-secondary">Ask about products, orders, or anything else.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">AI Agent</h1>
+          <p className="mt-1 text-sm text-secondary">
+            Ask about products, orders, or anything else.
+            {sessionId && (
+              <>
+                {' '}
+                — conversation resumes after reload.{' '}
+                <button onClick={resetConversation} className="text-accent hover:underline">
+                  Start a new conversation
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
 
       <div
         ref={scrollRef}
@@ -76,6 +134,35 @@ export default function Chat() {
           </div>
         )}
       </div>
+
+      {pending.length > 0 && (
+        <div className="mt-4 rounded-xl border border-accent/40 bg-surface p-3">
+          <div className="text-sm font-semibold text-primary">
+            Pending approvals ({pending.length})
+          </div>
+          <div className="mt-2 space-y-2">
+            {pending.map(p => (
+              <div key={p.token} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 flex-1 truncate text-secondary" title={p.description}>
+                  {p.description}
+                </span>
+                <button
+                  onClick={() => decide(p.token, true)}
+                  className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => decide(p.token, false)}
+                  className="rounded-lg border border-muted px-3 py-1 text-xs font-medium text-secondary hover:bg-bg"
+                >
+                  Deny
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex gap-2">
         <input
