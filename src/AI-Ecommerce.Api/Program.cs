@@ -142,9 +142,10 @@ builder.Services.AddScoped<IChatClient>(sp =>
     {
         Endpoint = new Uri("https://api.groq.com/openai/v1")
     };
+    var groqModel = Environment.GetEnvironmentVariable("GROQ_MODEL") ?? "openai/gpt-oss-20b";
     var client = new OpenAIClient(credential, options);
     IChatClient chatClient = client
-        .GetChatClient("llama-3.3-70b-versatile")
+        .GetChatClient(groqModel)
         .AsIChatClient();
 
     return new ChatClientBuilder(chatClient)

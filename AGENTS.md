@@ -8,20 +8,21 @@ re-discovering the same gotchas every session.
 
 ## 1. Project Overview
 
-**Agentic Commerce Platform** is a full-stack e-commerce app with an AI
-development agent built in. It has three ways to talk to the same agent brain:
+**Agentic Commerce Platform** is a full-stack commerce app (master /
+transaction / inventory / accounting / cart schema) with an AI development
+agent built in. It has three ways to talk to the same agent brain:
 
 - **CLI** (`AI-Ecommerce.Cli`) — terminal chat, for developer use
 - **Web API** (`AI-Ecommerce.Api`) — `POST /api/agent/chat`, JWT-protected
 - **React UI** (`AI-Ecommerce.UI`, `/agent` route) — browser chat
 
 All three route through the same `AgentHarness` class, which owns the system
-prompt, tool registration, retry logic, and (as of this session) SQL Server
-persistence of conversation history.
+prompt, tool registration, retry logic, and SQL Server persistence of
+conversation history (`ConversationHistory`).
 
 ---
 
-## 2. Tech Stack & Exact Versions (verified working, Aug 2026)
+## 2. Tech Stack & Exact Versions (verified working, Sep 2026)
 
 | Package | Version | Notes |
 |---|---|---|
@@ -30,14 +31,15 @@ persistence of conversation history.
 | Microsoft.Extensions.AI.Abstractions | 10.9.0 | Must match `Microsoft.Extensions.AI` exactly |
 | Microsoft.Extensions.AI.OpenAI | 10.8.0 | Provides `AsIChatClient()` off `ChatClient`, not `OpenAIClient` directly |
 | OpenAI (SDK) | 2.12.0 | Must be ≥2.12.0 to satisfy `Microsoft.Extensions.AI.OpenAI 10.8.0`'s transitive requirement |
-| Microsoft.EntityFrameworkCore.* | 9.0.0 | **All EF Core packages across ALL projects must be on the same major version.** Mixing EF Core 8 and 9 assemblies causes a runtime `MissingMethodException` on `TypeMappingInfo` — no compile error, only fails at first DB access |
+| Microsoft.EntityFrameworkCore.* | 9.0.0 | **All EF Core packages across ALL projects are now aligned on 9.0.0** — this was the source of the historical `MissingMethodException` on `TypeMappingInfo` (no compile error, only fails at first DB access). Keep it this way |
 | Microsoft.EntityFrameworkCore.Design | 9.0.0 | Must be on the **startup project** (`AI-Ecommerce.Cli` or `.Api`) for `dotnet ef` commands to work at all |
 
 **Rule: when touching any `Microsoft.Extensions.AI*` or `Microsoft.EntityFrameworkCore*`
 package in one `.csproj`, check all other `.csproj` files in the solution for the
 same package and align versions.** This bit us multiple times — NuGet's `NU1605`
 "package downgrade" error is your friend here; don't suppress it, fix the actual
-mismatch it's pointing at.
+mismatch it's pointing at. (The old README claim that `AI-Ecommerce.Data` was
+pinned to 8.0.0 is stale — it has been 9.0.0 for a while.)
 
 ---
 
@@ -64,11 +66,25 @@ mismatch it's pointing at.
 ## 4. Secrets (`.env` — never commit, template below)
 
 ```
+# Core API keys
 DEEPSEEK_API_KEY=
 GITHUB_TOKEN=
 GROQ_API_KEY=
 OPENROUTER_API_KEY=
+
+# SQL Server — read by CLI + EF Core design-time factory
 CONNECTION_STRING=Server=localhost,1433;Database=AgenticCommerceDB;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+
+# CLI chat provider: "opencode" (default) or "openrouter"
+LLM_PROVIDER=opencode
+OPENCODE_URL=http://127.0.0.1:4096
+OPENCODE_SERVER_PASSWORD=
+
+# API chat model on Groq (optional override, default openai/gpt-oss-20b)
+GROQ_MODEL=openai/gpt-oss-20b
+
+# JWT signing key (32+ chars), read by the Web API
+JWT_SECRET=
 ```
 
 - `CONNECTION_STRING` is read by the **CLI** at runtime (`Program.cs`) and by
@@ -79,13 +95,15 @@ CONNECTION_STRING=Server=localhost,1433;Database=AgenticCommerceDB;User Id=sa;Pa
   `appsettings.Development.json`. Keep these pointed at the same database
   (Docker SQL Server) as `.env`'s `CONNECTION_STRING`, or the API and CLI will
   silently use two different databases with two different sets of data.
+- The API reads `JWT_SECRET` from the environment (`.env`) and injects it over
+  `Jwt:Secret`; startup throws if it's missing or shorter than 32 chars.
 
 ---
 
-## 5. LLM Provider — Groq / OpenRouter / opencode, with known flakiness
+## 5. LLM Providers — Groq / OpenRouter / opencode, with known flakiness
 
-The agent uses free-tier hosted LLMs via OpenAI-compatible endpoints. **Both
-providers have real limitations; expect to swap between them.**
+The agent uses hosted LLMs via OpenAI-compatible endpoints. **All providers
+have real limitations; expect to swap between them.**
 
 ### CLI chat provider selection (`LLM_PROVIDER`)
 
@@ -98,29 +116,30 @@ selected at startup by the `LLM_PROVIDER` env var:
   `opencode`/Zen provider). It is **not** OpenAI-compatible, so it installs as
   a separate loop in `Program.RunOpenCodeChatAsync`, bypassing `IChatClient`
   and `AgentHarness`. History is maintained by the opencode server per session.
+  Requires `opencode serve --port 4096` running in another terminal (customize
+  with `OPENCODE_URL`, default `http://127.0.0.1:4096`, optionally protected
+  with `OPENCODE_SERVER_PASSWORD`).
 - `openrouter` — the original path through `IChatClient` → `AgentHarness`
-  (SQL persistence via `ConversationHistory`).
+  (SQL persistence via `ConversationHistory`), with an interactive y/n
+  `DevTools.ApprovalHandler`.
 
 For the `opencode` provider:
-- Start the server first in another terminal: `opencode serve --port 4096`
-  (customize with `OPENCODE_URL`, default `http://127.0.0.1:4096`, and
-  protect with `OPENCODE_SERVER_PASSWORD`).
 - **Chat history is maintained across CLI restarts**: the active opencode
   session id is persisted to `.opencode-session` (next to the CLI output
   assembly, i.e. `bin/Debug/net8.0/.opencode-session`) and resumed on the
   next `dotnet run`. Delete that file to start a brand-new conversation.
-- This addresses the "no resume last conversation" gap (section 11) for the
-  CLI **only** — it relies on the opencode server's own session store, not on
-  the SQL `ConversationHistory` table.
 
-### Groq (`https://api.groq.com/openai/v1`)
-- Model used: `llama-3.3-70b-versatile`
+### Groq (`https://api.groq.com/openai/v1`) — used by the Web API
+- Model: **`GROQ_MODEL` env var**, default `openai/gpt-oss-20b` (don't hardcode
+  a model id — it's configurable for a reason). Older notes referenced
+  `llama-3.3-70b-versatile`; that is only available today by setting
+  `GROQ_MODEL` explicitly — verify it still exists on Groq before pinning it.
 - Free tier TPM (tokens/minute) limits are easy to hit during active
   development/testing — expect `HTTP 429 rate_limit_exceeded`.
-- `llama-3.1-8b-instant` has an even *lower* TPM cap than `70b-versatile` —
+- `llama-3.1-8b-instant` has an even *lower* TPM cap than models like `70b` —
   don't switch to it thinking it'll help with rate limits, it's worse for that.
 
-### OpenRouter (`https://openrouter.ai/api/v1`)
+### OpenRouter (`https://openrouter.ai/api/v1`) — CLI `openrouter` path
 - Free-tier model availability **rotates without notice** — a specific model ID
   like `meta-llama/llama-3.3-70b-instruct:free` can be delisted from the free
   tier overnight, returning `HTTP 404` with a message pointing at the paid slug.
@@ -131,9 +150,9 @@ For the `opencode` provider:
   verify it's still free at `openrouter.ai/models` (filter: Price = Free) —
   don't trust any hardcoded list, including this one, without checking.
 
-### Tool-calling reliability (both providers)
-- Llama models occasionally either:
-  1. Fail to produce valid structured tool-call JSON → Groq/OpenRouter reject
+### Tool-calling reliability (all GPT-compatible providers)
+- Some models occasionally either:
+  1. Fail to produce valid structured tool-call JSON → the provider rejects
      with `HTTP 400 tool_use_failed`. **Not a bug in this codebase** — retry
      usually succeeds. `AgentHarness.ProcessMessageAsync` already retries up to
      2 times on this specific error.
@@ -157,17 +176,19 @@ public static Func<string, Task<bool>>? ApprovalHandler { get; set; }
 ```
 
 - `ReadFile`, `ListDirectory`, `SearchCode` are read-only and **never** gated.
-- **CLI**: `Program.cs` sets `ApprovalHandler` to an interactive
-  `Console.ReadLine()` y/n prompt. This blocks correctly in a single-user
-  terminal context.
+- **CLI (`LLM_PROVIDER=openrouter`)**: `Program.cs` sets `ApprovalHandler` to
+  an interactive `Console.ReadLine()` y/n prompt. This blocks correctly in a
+  single-user terminal context. (The default `opencode` path doesn't use
+  `DevTools` at all — the opencode server manages its own approvals.)
 - **Web API**: `Program.cs` sets `ApprovalHandler` to **auto-approve
   everything** (`return true`), because a console y/n prompt can't work
-  across concurrent HTTP requests from multiple users, and there's no
-  interactive approval UI built yet. **This is a known gap, not a finished
+  across concurrent HTTP requests. **This is a known gap, not a finished
   feature** — the API will execute `WriteFile`/`ExecuteCommand` unattended.
-  Do not expose this API beyond trusted/local use until a real
-  pending-approval workflow (e.g. return a confirmation token, require a
-  follow-up call to execute) is built.
+  Mitigation in place: tools are only *registered* for callers whose JWT
+  `UserTypeId` claim is MasterAdmin (`1`) or Admin (`2`), and the whole
+  `/api/agent/chat` endpoint rejects customers. Do not expose this API beyond
+  trusted/local use until a real pending-approval workflow (e.g. return a
+  confirmation token, require a follow-up call to execute) is built.
 
 ---
 
@@ -180,6 +201,11 @@ public static Func<string, Task<bool>>? ApprovalHandler { get; set; }
   exist yet for that session, it seeds the system prompt as the first row.
 - History is capped to the most recent 20 messages when loaded, to keep
   context size manageable.
+- The API's `AgentController.Chat` now accepts a `SessionId` from the client
+  and returns it in the response, so a browser can continue a conversation
+  across turns. The React UI keeps it in component state (lost on reload) —
+  see Known Gaps. The CLI `openrouter` path and the `opencode` path both
+  resume across restarts (SQL history / `.opencode-session` respectively).
 - **Migrations require a design-time factory** because `Program.cs` uses
   top-level statements with a manually-built `ServiceProvider`, which the EF
   Core CLI tools can't introspect. See `ApplicationDbContextFactory.cs`
@@ -191,6 +217,19 @@ public static Func<string, Task<bool>>? ApprovalHandler { get; set; }
   dotnet ef migrations add <Name> --startup-project ..\AI-Ecommerce.Cli
   dotnet ef database update --startup-project ..\AI-Ecommerce.Cli
   ```
+
+### Seed data pipeline (important)
+
+- Migrations create schema **only** (`DepartmentMaster` and `UserTypeMaster`
+  are seeded via EF `HasData`). All other reference data lives in
+  `schema/data.xlsx` and is imported by `scripts/import-from-excel.ps1`
+  (exported back by `scripts/export-data.ps1`, which regenerates
+  `schema/data.xlsx`, `schema/schema.txt`, and `scripts/seed-data.sql`).
+- `DataSeeder.SeedAsync` (called on API startup) only *checks presence* and
+  prints a warning listing empty tables — it **does not insert data**. The old
+  behavior of creating a random MasterAdmin password is gone; staff accounts
+  are created via `POST /api/auth/register-employee` or the `/employeeregister`
+  UI by an existing MasterAdmin/Admin.
 
 ---
 
@@ -206,9 +245,13 @@ docker-compose up -d sql-server
 # 3. Apply migrations to the fresh container
 cd src/AI-Ecommerce.Data
 dotnet ef database update --startup-project ..\AI-Ecommerce.Cli
-# 4. Run the CLI or API
+# 4. Import Excel seed data (all tables)
+cd ..\..
+$env:SQL_SA_PASSWORD = 'YourStrong!Passw0rd'
+.\scripts\import-from-excel.ps1
+# 5. Run the CLI or API
 cd ..\AI-Ecommerce.Cli
-dotnet run
+dotnet run          # CLI: needs `opencode serve --port 4096` running (or LLM_PROVIDER=openrouter)
 ```
 
 Full stack (CLI/API + React UI) requires **three processes running
@@ -232,6 +275,9 @@ requests.
 - XML doc comments on public methods
 - SOLID principles
 - Dependency injection for services
+- `[ApiController]` + explicit route templates; `[Authorize]` where required
+- Master entities use soft-delete via the global `DeletedAt == null` query
+  filter and `AuditableEntity` audit columns (`CreatedBy/ModifiedBy/DeletedBy`)
 
 ---
 
@@ -240,12 +286,16 @@ requests.
 ```
 AgenticCommercePlatform/
 ├── src/
-│   ├── AI-Ecommerce.Api/       # ASP.NET Core Web API (JWT auth, controllers)
+│   ├── AI-Ecommerce.Api/       # ASP.NET Core Web API (JWT auth, controllers,
+│   │                           #   rate limiting, login audit)
 │   ├── AI-Ecommerce.Agent/     # AgentHarness + DevTools (class library, no Main)
 │   ├── AI-Ecommerce.Cli/       # Console entry point — dotnet run works here
 │   ├── AI-Ecommerce.Data/      # EF Core models, ApplicationDbContext, migrations
 │   └── AI-Ecommerce.UI/        # React + TypeScript + Tailwind + Vite frontend
-├── tests/AI-Ecommerce.Tests/
+│       └── src/                # App.tsx, api/client.ts, contexts, components/
+├── tests/AI-Ecommerce.Tests/   # xUnit (empty stub — see FutureScope.md)
+├── scripts/                    # import-from-excel.ps1, export-data.ps1, seed-data.sql
+├── schema/                     # data.xlsx (source of truth), schema.txt (DDL)
 ├── docker-compose.yml          # sql-server, api, adminer services
 └── AI-Ecommerce-Platform.slnx  # solution file — build/restore/clean must target this explicitly
                                  #   when run from the solution root (multiple project files present)
@@ -261,17 +311,31 @@ dotnet build AI-Ecommerce-Platform.slnx
 Running bare `dotnet build` from the root fails with `MSB1011` (ambiguous —
 multiple project/solution files present).
 
+There is also an **orphaned `src/components/` folder at the repo root** —
+stale duplicates of UI components, not referenced by any project. Leave it
+alone unless you're deleting it as a cleanup task (tracked in `FutureScope.md`).
+
 ---
 
 ## 11. Known Gaps / Not Yet Built
 
 - Web API approval gating is auto-approve-only (see section 6) — no real
   pending-approval UX yet.
-- The CLI resumes its opencode conversation via the opencode server (see
-  section 5.1) — but the **API** still starts a fresh `SessionId` on every
-  request, with no "resume last conversation" feature.
+- Conversation resume: the **CLI** resumes (opencode server / persisted
+  session file) and the **API** accepts a client-supplied `SessionId`, but the
+  **React UI keeps it in memory only** — reloading the browser starts the
+  conversation context fresh. There is no persisted "resume last conversation"
+  feature for the web UI.
 - No automatic Groq → OpenRouter fallback — switching providers currently
   requires manually editing `Program.cs` in both CLI and API projects.
+- `System.IdentityModel.Tokens.Jwt` 7.0.3 has a known moderate vulnerability
+  (`NU1902`, GHSA-59j7-ghrg-fj52) — upgrade pending (see `FutureScope.md`).
 - Several pre-existing nullable-reference warnings (`CS8604`, `CS8602`) in
   `AI-Ecommerce.Api` (`JwtService.cs`, `OrdersController.cs`) — harmless,
   not yet cleaned up.
+- `ProductMaster` 3-step approval (`Approval1At/2At/3At`) exists in schema and
+  the dashboard lists pending approvals, but there is no approve/deny action in
+  the API or UI yet.
+- Purchase orders, credit/debit notes, receipts, and inventory transfers exist
+  as schema + models only — no controllers or UI.
+- The test project has no real coverage.

@@ -1,32 +1,95 @@
-# React + TypeScript + Vite
+# AI-Ecommerce.UI — React Storefront + Admin
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The frontend for the Agentic Commerce Platform. React 19 + TypeScript +
+Tailwind CSS + Vite. Talks to `AI-Ecommerce.Api` over HTTP with a JWT.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** + `react-router-dom` (v7, `BrowserRouter`)
+- **TypeScript** (~6.0), **Vite** (v8), **Oxlint** (not ESLint)
+- **Tailwind CSS** v3 + `@tailwindcss/forms`
+- **axios** for API calls
 
-## React Compiler
+## Quick start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Other scripts:
+
+```bash
+npm run build        # tsc -b && vite build
+npm run lint         # oxlint
+npm run preview      # vite preview
+```
+
+The dev server proxies nothing — the SPA calls the API directly. The API must
+be running at `http://localhost:5015` and its CORS policy must allow
+`http://localhost:5173` (it is hardcoded to that origin in
+`src/AI-Ecommerce.Api/Program.cs`).
+
+## How the app is wired
+
+```mermaid
+flowchart LR
+    UI["src/App.tsx<br/>BrowserRouter + AuthProvider"]
+    API["src/api/client.ts<br/>axios · :5015/api · Bearer token<br/>unwraps $id/$values"]
+    CONTEXT["src/contexts/AuthContext.tsx<br/>auth state + localStorage token"]
+
+    UI --> API
+    UI --> CONTEXT
+    CONTEXT -- "login / register / register-employee" --> API
+    UI --> PAGES["Pages / components"]
+    PAGES --> API
+```
+
+### API client (`src/api/client.ts`)
+
+- Base URL: `http://localhost:5015/api` (change the port here if the API runs
+  elsewhere).
+- Adds `Authorization: Bearer <token>` from `localStorage` on every request.
+- Response interceptor recursively **unwraps ASP.NET
+  `ReferenceHandler.Preserve` output** — arrays arrive as
+  `{ "$id": "1", "$values": [...] }` and back-references as
+  `{ "$ref": "n" }`; the interceptor flattens both so components can treat
+  `response.data` as plain arrays/objects. Keep this when touching the client.
+
+### Auth (`src/contexts/AuthContext.tsx`)
+
+- Stores `token` + user info in `localStorage`.
+- Exposes `login`, `register` (customers), `registerEmployee` (requires a
+  MasterAdmin/Admin session), and `logout`.
+
+## Routes (`src/App.tsx`)
+
+| Route | Page | Access |
+|---|---|---|
+| `/` | Home / feature landing | authenticated |
+| `/login`, `/register` | Customer login / self-registration | public |
+| `/employeeregister` | Create staff accounts | authenticated (server enforces MasterAdmin/Admin) |
+| `/products` | Storefront catalog (approved, in-stock products) | authenticated |
+| `/cart` | Cart + checkout (COD/UPI) | customer |
+| `/orders` | Order tracking (own orders; employee sees status) | authenticated |
+| `/profile` | Edit customer profile | customer |
+| `/dashboard` | Employee dashboard (counts, low stock, pending approvals) | employee |
+| `/masters/:entity` | Master-data CRUD (driven by `src/config/masterConfigs.ts`) | authenticated (writes require employee) |
+| `/agent` | AI agent chat | **employee only** (customers get 403 from the API) |
+
+## Master data consumer
+
+`src/config/masterConfigs.ts` is the single source of truth for the generic
+master CRUD screens (`src/components/Masters/MasterPage.tsx`): it maps each
+master entity key to its endpoint, id field, and column/form field list
+(supported field types: `text`, `number`, `select`, `checkbox`, `textarea`,
+`password`, plus `optionSource` to lazily load select options from another
+master endpoint). Add a new master by adding a config entry + list key.
+
+## Notes
+
+- The agent chat (`src/components/Agent/Chat.tsx`) keeps the API-returned
+  `SessionId` in component state — a conversation survives across turns but is
+  lost on page reload (known gap, see the repo-root `FutureScope.md`).
+- Tooling is modern-Vite (rolldown-based). Lint with `npm run lint` (oxlint),
+  not an ESLint config.
